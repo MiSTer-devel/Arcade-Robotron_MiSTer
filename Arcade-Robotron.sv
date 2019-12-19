@@ -29,7 +29,7 @@ module emu
 	input         RESET,
 
 	//Must be passed to hps_io module
-	inout  [44:0] HPS_BUS,
+	inout  [45:0] HPS_BUS,
 
 	//Base video clock. Usually equals to CLK_SYS.
 	output        VGA_CLK,
@@ -44,6 +44,7 @@ module emu
 	output        VGA_HS,
 	output        VGA_VS,
 	output        VGA_DE,    // = ~(VBlank | HBlank)
+	output        VGA_F1,
 
 	//Base video clock. Usually equals to CLK_SYS.
 	output        HDMI_CLK,
@@ -74,9 +75,21 @@ module emu
 
 	output [15:0] AUDIO_L,
 	output [15:0] AUDIO_R,
-	output        AUDIO_S    // 1 - signed audio samples, 0 - unsigned
+	output        AUDIO_S,   // 1 - signed audio samples, 0 - unsigned
+	
+	// Open-drain User port.
+	// 0 - D+/RX
+	// 1 - D-/TX
+	// 2..6 - USR2..USR6
+	// Set USER_OUT to 1 to read from USER_IN.
+	input   [6:0] USER_IN,
+	output  [6:0] USER_OUT
+	
+	
 );
 
+assign VGA_F1    = 0;
+assign USER_OUT  = '1;
 assign LED_USER  = ioctl_download;
 assign LED_DISK  = 0;
 assign LED_POWER = 0;
@@ -89,12 +102,11 @@ localparam CONF_STR = {
 	"A.ROBTRN;;", 
 	"-;",
 	"O1,Aspect Ratio,Original,Wide;",
-	"O34,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
-	"O56,Controls,Separate Fire,Walk with Fire,Walk+Fire;",
-	"-;",
+        "O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
+	"O67,Controls,Separate Fire,Walk with Fire,Walk+Fire;",
 	"-;",
 	"R0,Reset;",
-	"J,Fire Right,Fire Left,Fire Down,Fire Up,Start 1P,Start 2P;",
+	"J1,Fire Right,Fire Left,Fire Down,Fire Up,Start 1P,Start 2P;",
 	"V,v2.00.",`BUILD_DATE
 };
 
@@ -131,6 +143,9 @@ wire [15:0] joy_0, joy_1;
 
 wire        forced_scandoubler;
 
+wire [21:0] gamma_bus;
+
+
 hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 (
 	.clk_sys(clk_sys),
@@ -141,6 +156,7 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 	.buttons(buttons),
 	.status(status),
 	.forced_scandoubler(forced_scandoubler),
+	.gamma_bus(gamma_bus),
 
 	.ioctl_download(ioctl_download),
 	.ioctl_wr(ioctl_wr),
@@ -177,6 +193,12 @@ always @(posedge clk_sys) begin
 			'h083: HSreset			   <= pressed; // F7
 			'h003: rcoin			   <= pressed; // F5
 			'h004: lcoin			   <= pressed; // F3
+			// JPAC/IPAC/MAME Style Codes
+                        'h016: btn_start_1      <= pressed; // 1
+                        'h01E: btn_start_2     <= pressed; // 2
+                        'h02E: btn_coin         <= pressed; // 5
+                        'h036: btn_coin         <= pressed; // 6
+
 		endcase
 	end
 end
@@ -199,16 +221,21 @@ reg btn_right = 0;
 reg btn_down = 0;
 reg btn_up = 0;
 
+reg btn_coin = 0;
+reg btn_start_1=0;
+reg btn_start_2=0;
+
+
 wire [15:0] joy = joy_0 | joy_1;
 
-wire [7:0] sw = {btn_two_players | joy[9], slam, rcoin | joy[8], mcoin | joy[9], lcoin, HSreset, advance, autoup};
+wire [7:0] sw = {btn_start_2 | btn_two_players | joy[9], slam, btn_coin | rcoin | joy[8], mcoin | joy[9], lcoin, HSreset, advance, autoup};
 
-wire fire = status[5] || joy[7:4];
+wire fire = status[6] || joy[7:4];
 
-wire [8:0] jc = !status[6:5] ? 
-       {btn_one_player  | joy[8], btn_right | joy[4], btn_left  | joy[5], btn_down | joy[6], btn_up | joy[7],
+wire [8:0] jc = !status[7:6] ? 
+       {btn_start_1 | btn_one_player  | joy[8], btn_right | joy[4], btn_left  | joy[5], btn_down | joy[6], btn_up | joy[7],
         btn_mright      | joy[0], btn_mleft | joy[1], btn_mdown | joy[2], btn_mup  | joy[3]} :
-       {btn_one_player  | joy[8], btn_right | (joy[0] & fire), btn_left  | (joy[1] & fire), btn_down | (joy[2] & fire), btn_up | (joy[3] & fire),
+       {btn_start_1 | btn_one_player  | joy[8], btn_right | (joy[0] & fire), btn_left  | (joy[1] & fire), btn_down | (joy[2] & fire), btn_up | (joy[3] & fire),
         btn_mright      | joy[0], btn_mleft | joy[1], btn_mdown | joy[2], btn_mup  | joy[3]};
 
 ///////////////////////////////////////////////////////////////////
@@ -216,6 +243,20 @@ wire [8:0] jc = !status[6:5] ?
 wire [2:0] r,g,ri,gi;
 wire [1:0] b,bi;
 wire vs,hs;
+
+arcade_fx #(306,8) arcade_video
+(
+        .*,
+        .clk_video(clk_sys),
+        .RGB_in({r,g,b}),
+        .fx(status[5:3]),
+	.ce_pix(!pcnt[1:0])
+//        .no_rotate(status[2])
+
+);
+
+
+/*
 assign VGA_CLK  = clk_sys;
 assign HDMI_CLK = VGA_CLK;
 assign HDMI_CE  = VGA_CE;
@@ -226,6 +267,8 @@ assign HDMI_DE  = VGA_DE;
 assign HDMI_HS  = VGA_HS;
 assign HDMI_VS  = VGA_VS;
 assign HDMI_SL  = 0;
+
+
 
 wire [1:0] scale = status[4:3];
 
@@ -245,6 +288,7 @@ video_mixer #(.HALF_DEPTH(1)) video_mixer
 	.G({g,g[2]}),
 	.B({b,b})
 );
+*/
 
 wire [7:0] audio;
 assign AUDIO_L = {audio, audio};
