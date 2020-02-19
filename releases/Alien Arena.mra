@@ -9,21 +9,21 @@
 		<dip bits="0"   name="Auto Up" ids="Off,On"/>
 		<dip bits="1"   name="Advance" ids="Off,On"/>
 	</switches>
-	<rom index="0" zip="alienar.zip" md5="89c1ca8e01e1b027c88492f3f221a56c" type="merged">
-		<part name="aarom01"/>
-		<part name="aarom02"/>
-		<part name="aarom03"/>
-		<part name="aarom04"/>
-		<part name="aarom05"/>
-		<part name="aarom06"/>
-		<part name="aarom07"/>
-		<part name="aarom08"/>
-		<part name="aarom09"/>
-		<part name="aarom10"/>
-		<part name="aarom11"/>
-		<part name="aarom12"/>
-		<part name="alienaru/sg.snd"/>
-		<part name="alienaru/sg.snd"/>
+	<rom index="0" zip="alienar.zip|alienaru.zip" md5="89c1ca8e01e1b027c88492f3f221a56c" type="merged">
+		<part crc="bb0c21be" name="aarom01"/>
+		<part crc="165acd37" name="aarom02"/>
+		<part crc="e5d51d92" name="aarom03"/>
+		<part crc="24f6feb8" name="aarom04"/>
+		<part crc="5b1ac59b" name="aarom05"/>
+		<part crc="da7195a2" name="aarom06"/>
+		<part crc="f9812be4" name="aarom07"/>
+		<part crc="cd7f3a87" name="aarom08"/>
+		<part crc="e6ce77b4" name="aarom09"/>
+		<part crc="6feb0314" name="aarom10"/>
+		<part crc="ae3a270e" name="aarom11"/>
+		<part crc="6be9f09e" name="aarom12"/>
+		<part crc="2fcf6c4d" name="alienaru/sg.snd"/>
+		<part crc="2fcf6c4d" name="alienaru/sg.snd"/>
 		<part>
 				02 25 00 03 00 03 00 01 00 04 00 01 00 01 00 00
 				00 00 00 01 00 03 00 03 00 00 00 00 00 00 00 00
@@ -90,7 +90,7 @@
 				00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 				00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 		</part>
-		<part zip="robotron.zip" name="decoder.4"/>
-		<part zip="robotron.zip" name="decoder.6"/>
+		<part crc="e6631c23" zip="robotron.zip" name="decoder.4"/>
+		<part crc="83faf25e" zip="robotron.zip" name="decoder.6"/>
 	</rom>
 </misterromdescription>
