@@ -10,19 +10,19 @@
 		<dip bits="1"   name="Advance" ids="Off,On"/>
 	</switches>
     <rom index="0" zip="joust.zip" md5="15f0b30141e1588512afb930a9c5d5b0" type="merged">
-		<part name="3006-13.1b"/>
-		<part name="3006-14.2b"/>
-		<part name="3006-15.3b"/>
-		<part name="3006-16.4b"/>
-		<part name="3006-17.5b"/>
-		<part name="3006-18.6b"/>
-		<part name="3006-19.7b"/>
-		<part name="3006-20.8b"/>
-		<part name="3006-21.9b"/>
-		<part name="3006-22.10b"/>
-		<part name="3006-23.11b"/>
-		<part name="3006-24.12b"/>
-		<part name="joust.snd"/>
+		<part crc="fe41b2af" name="3006-13.1b"/>
+		<part crc="501c143c" name="3006-14.2b"/>
+		<part crc="43f7161d" name="3006-15.3b"/>
+		<part crc="db5571b6" name="3006-16.4b"/>
+		<part crc="c686bb6b" name="3006-17.5b"/>
+		<part crc="fac5f2cf" name="3006-18.6b"/>
+		<part crc="81418240" name="3006-19.7b"/>
+		<part crc="ba5359ba" name="3006-20.8b"/>
+		<part crc="39643147" name="3006-21.9b"/>
+		<part crc="3f1c4f89" name="3006-22.10b"/>
+		<part crc="ea48b359" name="3006-23.11b"/>
+		<part crc="c710717b" name="3006-24.12b"/>
+		<part crc="f1835bdd" name="joust.snd"/>
 		<part>
 			f2 00 00 f5 00 f1 00 f3 00 f1 00 f4 00 f1 00 f1 
 			00 00 00 00 00 f5 00 f3 00 00 00 00 00 00 00 00 
@@ -89,7 +89,7 @@
 			00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
 			00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 		</part>
-		<part name="decoder.4"/>
-		<part name="decoder.6"/>
+		<part crc="e6631c23" name="decoder.4"/>
+		<part crc="83faf25e" name="decoder.6"/>
     </rom>
 </misterromdescription>
