@@ -339,7 +339,7 @@ always @(*) begin
 				fourfire = 1;
 				BTN = { m_start1, m_start2, m_coin1 };
 				JA  = ~{ status[6] ? {m_right, m_left, m_down, m_up} : {m_fire_a, m_fire_d, m_fire_b, m_fire_c}, m_right, m_left, m_down, m_up };
-				JB  = ~{ status[6] ? {m_right, m_left, m_down, m_up} : {m_fire_a, m_fire_d, m_fire_b, m_fire_c}, m_right, m_left, m_down, m_up };
+				JB  = JA;
 			end
 		mod_joust:
 			begin
@@ -359,13 +359,13 @@ always @(*) begin
 			begin
 				BTN = { m_start2, m_start1, m_coin1 };
 				JA  = ~{ 4'b0000, m_right, m_left, m_down, m_up };
-				JB  = ~{ 4'b0000, m_right, m_left, m_down, m_up };
+				JB  = JA;
 			end
 		mod_stargate:
 			begin
 				BTN = { m_start2, m_start1, m_coin1 };
 				JA  = ~{ m_start1, m_up, m_down, status[6] ? (sg_state ? m_right : m_left) : (m_left | m_right), m_fire_d, m_fire_c, status[6] ? (sg_state ? m_left : m_right) : m_fire_b, m_fire_a };
-				JB  = ~{ m_start1, m_up, m_down, status[6] ? (sg_state ? m_right : m_left) : (m_left | m_right), m_fire_d, m_fire_c, status[6] ? (sg_state ? m_left : m_right) : m_fire_b, m_fire_a };
+				JB  = JA;
 			end
 		mod_alienar:
 			begin
@@ -379,7 +379,7 @@ always @(*) begin
 				landscape = 0;
 				BTN = { m_start1, m_start2, m_coin1 };
 				JA  = ~{ (amx == 7) ? dmx : amx, (amy == 7) ? dmy : amy };
-				JB  = ~{ (amx == 7) ? dmx : amx, (amy == 7) ? dmy : amy };
+				JB  = JA;
 			end
 		default: ;
 	endcase
