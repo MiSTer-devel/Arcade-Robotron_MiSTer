@@ -56,6 +56,7 @@ port (
 
 	blitter_sc2      : in    std_logic;
 	sinistar         : in    std_logic;
+	sg_state         : out   std_logic;
 
 	-- Switches
 	SW               : in    std_logic_vector(7 downto 0);
@@ -157,6 +158,19 @@ port map (
 	E                => cpu_e,
 	Q                => cpu_q
 );
+
+process (clock) 
+begin
+	if rising_edge(clock) then 
+		if cpu_rwn = '0' and cpu_a = x"9C92" then
+			if cpu_dout = X"FD" then
+				sg_state <= '1';
+			else
+				sg_state <= '0';
+			end if;
+		end if;
+	end if;
+end process;
 
 cpu_board: entity work.williams_cpu
 port map (

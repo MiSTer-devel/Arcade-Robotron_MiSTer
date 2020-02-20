@@ -104,7 +104,9 @@ localparam CONF_STR = {
 	"O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
 	"-;",
 	"h2O6,Fire,4-way,Move+Fire;",
-	"-;",
+	"h2-;",
+	"h3O6,Control,Mode 1,Mode 2;",
+	"h3-;",
 	"DIP;",
 	"-;",
 	"R0,Reset;",
@@ -159,7 +161,7 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 
 	.buttons(buttons),
 	.status(status),
-	.status_menumask({fourfire,landscape,direct_video}),
+	.status_menumask({mod == mod_stargate,fourfire,landscape,direct_video}),
 	.forced_scandoubler(forced_scandoubler),
 	.gamma_bus(gamma_bus),
 	.direct_video(direct_video),
@@ -362,8 +364,8 @@ always @(*) begin
 		mod_stargate:
 			begin
 				BTN = { m_start2, m_start1, m_coin1 };
-				JA  = ~{ m_start1, m_up, m_down, m_left | m_right, m_fire_d, m_fire_c, m_fire_b, m_fire_a };
-				JB  = ~{ m_start1, m_up, m_down, m_left | m_right, m_fire_d, m_fire_c, m_fire_b, m_fire_a };
+				JA  = ~{ m_start1, m_up, m_down, status[6] ? (sg_state ? m_right : m_left) : (m_left | m_right), m_fire_d, m_fire_c, status[6] ? (sg_state ? m_left : m_right) : m_fire_b, m_fire_a };
+				JB  = ~{ m_start1, m_up, m_down, status[6] ? (sg_state ? m_right : m_left) : (m_left | m_right), m_fire_d, m_fire_c, status[6] ? (sg_state ? m_left : m_right) : m_fire_b, m_fire_a };
 			end
 		mod_alienar:
 			begin
@@ -426,6 +428,8 @@ wire        ramcs;
 wire        ramlb;
 wire        ramub;
 
+wire        sg_state;
+
 williams_soc soc
 (
 	.clock       ( clk_sys     ),
@@ -438,6 +442,8 @@ williams_soc soc
 
 	.blitter_sc2 ( blitter_sc2 ),
 	.sinistar    ( sinistar    ),
+	.sg_state    ( sg_state    ),
+
 	.BTN         ( {BTN[2:0],reset} ),
 	.SIN_FIRE    ( ~m_fire_a   ),
 	.SIN_BOMB    ( ~m_fire_b   ),
