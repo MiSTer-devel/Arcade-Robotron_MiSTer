@@ -35,20 +35,11 @@ port (
 	clock            : in    std_logic; -- 12MHz
 
 	-- Cellular RAM / StrataFlash
-	MemOE            : out   std_logic;
 	MemWR            : out   std_logic;
 
-	RamAdv           : out   std_logic;
 	RamCS            : out   std_logic;
-	RamClk           : out   std_logic;
-	RamCRE           : out   std_logic;
 	RamLB            : out   std_logic;
 	RamUB            : out   std_logic;
-	RamWait          : in    std_logic;
-
-	FlashRp          : out   std_logic;
-	FlashCS          : out   std_logic;
-	FlashStSts       : in    std_logic;
 
 	MemAdr           : out   std_logic_vector(15 downto 0);
 	MemDin           : out   std_logic_vector(7 downto 0);
@@ -75,13 +66,16 @@ port (
 
 	-- Audio
 	audio_out        : out   std_logic_vector(7 downto 0);
+	speech_out       : out   std_logic_vector(15 downto 0);
 
 	-- 12-pin connectors
 	JA               : in    std_logic_vector(7 downto 0);
 	JB               : in    std_logic_vector(7 downto 0);
 	
+	
+	
 	dl_clock         : in    std_logic;
-	dl_addr          : in    std_logic_vector(15 downto 0);
+	dl_addr          : in    std_logic_vector(16 downto 0);
 	dl_data          : in    std_logic_vector(7 downto 0);
 	dl_wr            : in    std_logic
 );
@@ -134,7 +128,15 @@ signal  select_sound : std_logic_vector( 5 downto 0);
 
 signal  snd_addr     : std_logic_vector(11 downto 0);
 signal  snd_do       : std_logic_vector( 7 downto 0);
+signal  sp1_do       : std_logic_vector( 7 downto 0);
+signal  sp2_do       : std_logic_vector( 7 downto 0);
+signal  sp3_do       : std_logic_vector( 7 downto 0);
+signal  sp4_do       : std_logic_vector( 7 downto 0);
 signal  snd_rom_we   : std_logic;
+signal  spch_rom1_we : std_logic;
+signal  spch_rom2_we : std_logic;
+signal  spch_rom3_we : std_logic;
+signal  spch_rom4_we : std_logic;
 
 begin
 
@@ -197,20 +199,11 @@ port map (
 	Q                => cpu_q,
 
 	-- Cellular RAM / StrataFlash
-	MemOE            => MemOE,
 	MemWR            => MemWR,
 
-	RamAdv           => RamAdv,
 	RamCS            => RamCS,
-	RamClk           => RamClk,
-	RamCRE           => RamCRE,
 	RamLB            => RamLB,
 	RamUB            => RamUB,
-	RamWait          => RamWait,
-
-	FlashRp          => FlashRp,
-	FlashCS          => FlashCS,
-	FlashStSts       => FlashStSts,
 
 	MemAdr           => MemAdr,
 	MemDin           => MemDin,
@@ -265,7 +258,59 @@ port map(
 	d_b    => dl_data
 );
 
-snd_rom_we <= '1' when dl_wr = '1' and dl_addr(15 downto 12) = x"C" else '0'; -- C000-CFFF
+sp1_rom : entity work.dpram
+generic map( dWidth => 8, aWidth => 12)
+port map(
+	clk_a  => clock,
+	addr_a => snd_addr,
+	q_a    => sp1_do,
+	clk_b  => dl_clock,
+	we_b   => spch_rom1_we,
+	addr_b => dl_addr(11 downto 0),
+	d_b    => dl_data
+);
+
+sp2_rom : entity work.dpram
+generic map( dWidth => 8, aWidth => 12)
+port map(
+	clk_a  => clock,
+	addr_a => snd_addr,
+	q_a    => sp2_do,
+	clk_b  => dl_clock,
+	we_b   => spch_rom2_we,
+	addr_b => dl_addr(11 downto 0),
+	d_b    => dl_data
+);
+
+sp3_rom : entity work.dpram
+generic map( dWidth => 8, aWidth => 12)
+port map(
+	clk_a  => clock,
+	addr_a => snd_addr,
+	q_a    => sp3_do,
+	clk_b  => dl_clock,
+	we_b   => spch_rom3_we,
+	addr_b => dl_addr(11 downto 0),
+	d_b    => dl_data
+);
+
+sp4_rom : entity work.dpram
+generic map( dWidth => 8, aWidth => 12)
+port map(
+	clk_a  => clock,
+	addr_a => snd_addr,
+	q_a    => sp4_do,
+	clk_b  => dl_clock,
+	we_b   => spch_rom4_we,
+	addr_b => dl_addr(11 downto 0),
+	d_b    => dl_data
+);
+
+snd_rom_we   <= '1' when dl_wr = '1' and dl_addr(15 downto 12) = x"C" else '0'; -- C000-CFFF
+spch_rom1_we <= '1' when dl_wr = '1' and dl_addr(16 downto 12) = "01110" else '0'; -- 0E000-0EFFF
+spch_rom2_we <= '1' when dl_wr = '1' and dl_addr(16 downto 12) = "01111" else '0'; -- 0F000-0FFFF
+spch_rom3_we <= '1' when dl_wr = '1' and dl_addr(16 downto 12) = "10000" else '0'; -- 10000-10FFF
+spch_rom4_we <= '1' when dl_wr = '1' and dl_addr(16 downto 12) = "10001" else '0'; -- 11000-11FFF
 
 -- sound board
 sound_board : entity work.williams_sound_board
@@ -275,8 +320,13 @@ port map(
 	hand          => hand,
 	select_sound  => select_sound,
 	audio_out     => audio_out,
+	speech_out    => speech_out,
 	rom_addr      => snd_addr,
-	rom_do        => snd_do
+	rom_do        => snd_do,
+	sp1_do		  => sp1_do,
+	sp2_do		  => sp2_do,
+	sp3_do		  => sp3_do,
+	sp4_do		  => sp4_do
 );
 
 end Behavioral;

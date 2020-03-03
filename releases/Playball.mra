@@ -1,9 +1,9 @@
 <misterromdescription>
-	<name>Sinistar (revision 3)</name>
+	<name>playball</name>
 	<mameversion>0218</mameversion>
-	<setname>sinistar</setname>
+	<setname>playball</setname>
 	<mratimestamp>20200220001702</mratimestamp>
-	<year>1982</year>
+	<year>1983</year>
 	<manufacturer>Williams</manufacturer>
 	<category>Space / Asteroids</category>
 	<category>Space / Fighter</category>
@@ -12,24 +12,24 @@
 		<dip bits="0" name="Auto Up" ids="Off,On"/>
 		<dip bits="1" name="Advance" ids="Off,On"/>
 	</switches>
-	<buttons names="Fire,Bomb,-,-,Start 1P,Start 2P,Coin" default="A,B,Start,Select,R"/>
+	<buttons names="-,-,-,-,Start 1P,Start 2P,Coin" default="A,Start,Select,R"/>
 	<rom index="1">
-		<part>6</part>
+		<part>7</part>
 	</rom>
-	<rom index="0" zip="sinistar.zip" md5="b3bf4485053f651dcdc34526c92f0665">
-		<part crc="f6f3a22c" name="sinistar.01"/>
-		<part crc="cab3185c" name="sinistar.02"/>
-		<part crc="1ce1b3cc" name="sinistar.03"/>
-		<part crc="6da632ba" name="sinistar.04"/>
-		<part crc="b662e8fc" name="sinistar.05"/>
-		<part crc="2306183d" name="sinistar.06"/>
-		<part crc="e5dd918e" name="sinistar.07"/>
-		<part crc="4785a787" name="sinistar.08"/>
-		<part crc="50cb63ad" name="sinistar.09"/>
-		<part crc="3d670417" name="sinistar.10"/>
-		<part crc="3d670417" name="sinistar.10"/>
-		<part crc="3162bc50" name="sinistar.11"/>
-		<part crc="b82f4ddb" name="sinistar.snd"/>
+	<rom index="0" zip="playball.zip|alienaru.zip" md5="85f6cdf35c4b23f468dd4cdf50948b3d">
+		<part crc="7ba8fd71" name="playball.01"/>
+		<part crc="2387c3d4" name="playball.02"/>
+		<part crc="d34cc5fd" name="playball.03"/>
+		<part crc="f68c3a8e" name="playball.04"/>
+		<part crc="a3f20810" name="playball.05"/>
+		<part crc="f213e48e" name="playball.06"/>
+		<part crc="9b5574e9" name="playball.07"/>
+		<part crc="b2d2074a" name="playball.08"/>
+		<part crc="c4566d0f" name="playball.09"/>
+		<part crc="18787b52" name="playball.10"/>
+		<part crc="1dd5c8f2" name="playball.11"/>
+		<part crc="a700597b" name="playball.12"/>
+		<part crc="f3076f9f" name="playball.snd"/>
 		<part>
 03300330000300050001000100030001
 00040001000100000000000000000000
@@ -230,9 +230,9 @@
 00000000000000000000000000000000
 00000000000000000000000000000000
 		</part>	
-		<part crc="e1019568" name="speech.ic7"/>
-		<part crc="cf3b5ffd" name="speech.ic5"/>
-		<part crc="ff8d2645" name="speech.ic6"/>
-		<part crc="4b56a626" name="speech.ic4"/>
+		<part crc="7e4fc798" name="speech.ic4"/>
+		<part crc="ddfe860c" name="speech.ic5"/>
+		<part crc="8bfebf87" name="speech.ic6"/>
+		<part crc="db351db6" name="speech.ic7"/>
 	</rom>
 </misterromdescription>

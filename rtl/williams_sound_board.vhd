@@ -19,6 +19,8 @@
 -- Version 0.0 -- 15/10/2017 -- 
 --		    initial version
 ---------------------------------------------------------------------------------
+-- 2020 added speech 
+
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -29,11 +31,16 @@ entity williams_sound_board is
 port(
 	clock        : in  std_logic;
 	reset        : in  std_logic;
-	hand         : out std_logic;
+	hand         : in std_logic;
 	select_sound : in  std_logic_vector( 5 downto 0);
 	audio_out    : out std_logic_vector( 7 downto 0);
+	speech_out   : out std_logic_vector(15 downto 0);
 	rom_addr     : out std_logic_vector(11 downto 0);
 	rom_do       : in  std_logic_vector( 7 downto 0);
+	sp1_do       : in  std_logic_vector( 7 downto 0);
+	sp2_do       : in  std_logic_vector( 7 downto 0);
+	sp3_do       : in  std_logic_vector( 7 downto 0);
+	sp4_do       : in  std_logic_vector( 7 downto 0);
 	rom_vma      : out std_logic
 );
 end williams_sound_board;
@@ -52,7 +59,8 @@ architecture struct of williams_sound_board is
  signal wram_do   : std_logic_vector( 7 downto 0);
  
  signal rom_cs    : std_logic;
-
+ signal spch_cs   : std_logic;
+ signal spch_do   : std_logic_vector( 7 downto 0);
  signal ce_089    : std_logic;
 
 -- pia port a
@@ -69,6 +77,10 @@ architecture struct of williams_sound_board is
 --      ca2 speech data N/C
 --      cb2 speech clock N/C
 
+ signal speech_clk      : std_logic;
+ signal speech_data     : std_logic;
+ 
+ 
  signal pia_rw_n   : std_logic;
  signal pia_cs     : std_logic;
  signal pia_irqa   : std_logic;
@@ -93,7 +105,8 @@ port map
 -- pia cs
 wram_cs <= '1' when cpu_addr(15 downto  8) = X"00" else '0';                        -- 0000-007F
 pia_cs  <= '1' when cpu_addr(14 downto 12) = "000" and cpu_addr(10) = '1' else '0'; -- 8400-8403 ? => 0400-0403
-rom_cs  <= '1' when cpu_addr(15 downto 12) = X"F" else '0';                         -- F800-FFFF
+spch_cs <= '1' when cpu_addr(15 downto 12) >= X"B" and cpu_addr(15 downto 12) <= X"F" else '0'; -- B000-EFFF
+rom_cs  <= '1' when cpu_addr(15 downto 12) = X"F" else '0';                         -- F000-FFFF
 	
 -- write enables
 wram_we  <= '1' when cpu_rw = '0' and wram_cs = '1' else '0';
@@ -103,19 +116,26 @@ pia_rw_n <= '0' when cpu_rw = '0' and pia_cs = '1'  else '1';
 cpu_di <=
 	wram_do when wram_cs = '1' else
 	pia_do  when pia_cs = '1'  else
-	rom_do  when rom_cs = '1'  else X"55";
+	rom_do  when rom_cs   = '1' else 
+	spch_do when spch_cs  = '1' else X"55";
+
+spch_do <=	
+	sp1_do when cpu_addr(15 downto 12) = "1011"  else
+	sp2_do when cpu_addr(15 downto 12) = "1100"  else
+	sp3_do when cpu_addr(15 downto 12) = "1101"  else
+	sp4_do when cpu_addr(15 downto 12) = "1110"  else
+	x"FF";
 
 -- pia I/O
 audio_out <= pia_pa_o;
 
 pia_pb_i(5 downto 0) <= select_sound(5 downto 0);
 pia_pb_i(6) <= '1';
-pia_pb_i(7) <= '1'; -- Handshake to ? from rom board (drawings are confusing)
+pia_pb_i(7) <= hand; -- Handshake from rom board rom_pia_pa_out(7)
 
-hand <= '1';
 
 -- pia Cb1
-pia_cb1_i <= '0' when select_sound = "111111" else '1';
+pia_cb1_i <= '0' when select_sound = "111111" and hand = '1' else '1';
 
 -- pia irqs to cpu
 cpu_irq  <= pia_irqa or pia_irqb;
@@ -170,15 +190,107 @@ port map
 	pa_oe       => open,
 	ca1       	=> '1',
 	ca2_i      	=> '0',
-	ca2_o       => open,
+	ca2_o       => speech_data,
 	ca2_oe      => open,
 	pb_i      	=> pia_pb_i,
 	pb_o        => open,
 	pb_oe       => open,
 	cb1       	=> pia_cb1_i,
 	cb2_i      	=> '0',
-	cb2_o       => open,
+	cb2_o       => speech_clk,
 	cb2_oe      => open
 );
 
+-- CVSD speech decoder	
+IC1: entity work.HC55564	
+port map(	
+	clk => speech_clk,
+	rst => '0', -- Reset is not currently implemented
+	bit_in => speech_data,
+	sample_out(15 downto 0) => speech_out
+	);
+
 end struct;
+
+-- HC55516/HC55564 Continuously Variable Slope Delta decoder
+-- (c)2015 vlait
+--
+-- This is free software: you can redistribute
+-- it and/or modify it under the terms of the GNU General
+-- Public License as published by the Free Software
+-- Foundation, either version 3 of the License, or (at your
+-- option) any later version.
+--
+-- This is distributed in the hope that it will
+-- be useful, but WITHOUT ANY WARRANTY; without even the
+-- implied warranty of MERCHANTABILITY or FITNESS FOR A
+-- PARTICULAR PURPOSE. See the GNU General Public License
+-- for more details.
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+ 
+entity hc55564 is 
+port(
+	clk        : in std_logic;
+	rst        : in std_logic;
+	bit_in     : in std_logic;
+	sample_out : out std_logic_vector(15 downto 0)
+	);
+ 
+end hc55564;  
+ 
+architecture hdl of hc55564 is 
+  
+  signal runofn 	: std_logic_vector(2 downto 0);
+  signal res1 		: unsigned(31 downto 0);
+  signal res2 		: unsigned(31 downto 0);
+  signal res3 		: unsigned(31 downto 0);
+  constant h   	: integer := ((1 - 1/8) *256 ); --integrator decay 1- 1/8 * 256
+  constant b   	: integer := ((1 - 1/256)*256); --syllabic decay 1 - 1/256
+  signal x   		: unsigned(15 downto 0);  --integrator
+  signal s   		: unsigned(15 downto 0);  --syllabic
+  
+begin
+
+process(clk, rst, bit_in)
+begin
+ -- reset ??
+if (rising_edge(clk)) then
+	runofn(2) <= runofn(1);
+	runofn(1) <= runofn(0);
+	runofn(0) <= bit_in;
+	res1 <= x * h;
+	x <= res1(31-8 downto 16-8);     
+	if runofn = "000" or runofn = "111" then
+		s <= s + 40; -- 40
+		if s > to_unsigned(2560,16) then
+			s <= to_unsigned(2560,16);
+		end if;
+	else 
+		res2 <= s * b;
+		s <= res2(31-8 downto 16-8);
+		if s < to_unsigned(40, 16) then
+			s <= to_unsigned(40, 16); --40
+		end if;
+	end if;
+	if bit_in = '0' then
+		if ( (x - s) > x ) then
+			x <= to_unsigned(0,16);
+		else
+			x <= x - s;
+		end if;
+	else 
+		if ( x + s ) < x then
+			x <= to_unsigned(65535,16);
+		else
+			x <= x + s;
+		end if;
+	end if;
+end if;
+end process;
+ 
+sample_out <= std_logic_vector(x);
+   
+end architecture hdl;

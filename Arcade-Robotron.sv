@@ -306,6 +306,7 @@ localparam mod_bubbles  = 3;
 localparam mod_stargate = 4;
 localparam mod_alienar  = 5;
 localparam mod_sinistar = 6;
+localparam mod_playball = 7;
 
 reg [7:0] mod = 0;
 always @(posedge clk_sys) if (ioctl_wr & (ioctl_index==1)) mod <= ioctl_dout;
@@ -381,6 +382,13 @@ always @(*) begin
 				JA  = ~{ (amx == 7) ? dmx : amx, (amy == 7) ? dmy : amy };
 				JB  = JA;
 			end
+		mod_playball:
+			begin
+				landscape = 0;
+				BTN = { m_start2, m_start1, m_coin1 };
+				JA  = ~{ m_fire1a, m_fire1b, m_fire1c, m_fire1d ,m_fire1a, m_right1, m_left1,m_fire1a };
+				JB  = JA;
+			end
 		default: ;
 	endcase
 end
@@ -418,7 +426,7 @@ wire  [1:0] b;
 wire        vs,hs;
 
 wire  [7:0] audio;
-
+wire [15:0] speech;
 
 wire [15:0] mem_addr;
 wire  [7:0] mem_do = ~ramcs ? ram_do : rom_do;
@@ -439,6 +447,7 @@ williams_soc soc
 	.Hsync       ( hs          ),
 	.Vsync       ( vs          ),
 	.audio_out   ( audio       ),
+	.speech_out  ( speech       ),
 
 	.blitter_sc2 ( blitter_sc2 ),
 	.sinistar    ( sinistar    ),
@@ -460,20 +469,20 @@ williams_soc soc
 	.RamUB       ( ramub       ),
 
 	.dl_clock    ( clk_sys     ),
-	.dl_addr     ( ioctl_addr[15:0] ),
+	.dl_addr     ( ioctl_addr[16:0] ),
 	.dl_data     ( ioctl_dout  ),
 	.dl_wr       ( ioctl_wr & rom_download )
 );
 
 wire [7:0] rom_do;
-dpram #(.dWidth(8),.aWidth(16)) cpu_prog_rom
+dpram #(.dWidth(8),.aWidth(17)) cpu_prog_rom
 (
 	.clk_a(~clk_sys),
-	.addr_a({mem_addr[15], ~mem_addr[15] & mem_addr[14], mem_addr[13:0]}),
+	.addr_a({1'b0,mem_addr[15], ~mem_addr[15] & mem_addr[14], mem_addr[13:0]}),
 	.q_a(rom_do),
 
 	.clk_b(clk_sys),
-	.addr_b(ioctl_addr[15:0]),
+	.addr_b(ioctl_addr[16:0]),
 	.d_b(ioctl_dout),
 	.we_b(ioctl_wr & rom_download)
 );
@@ -537,7 +546,7 @@ arcade_video #(296,240,8) arcade_video
 );
 
 assign AUDIO_L = {audio, audio};
-assign AUDIO_R = AUDIO_L;
+assign AUDIO_R = speech;
 assign AUDIO_S = 0;
 
 endmodule

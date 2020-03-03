@@ -57,20 +57,12 @@ entity williams_cpu is
 		Q                : out   std_logic;
 
 		-- Cellular RAM / StrataFlash
-		MemOE            : out   std_logic;
 		MemWR            : out   std_logic;
 
-		RamAdv           : out   std_logic;
 		RamCS            : out   std_logic;
-		RamClk           : out   std_logic;
-		RamCRE           : out   std_logic;
 		RamLB            : out   std_logic;
 		RamUB            : out   std_logic;
-		RamWait          : in    std_logic;
 
-		FlashRp          : out   std_logic;
-		FlashCS          : out   std_logic;
-		FlashStSts       : in    std_logic;
 
 		MemAdr           : out   std_logic_vector(15 downto 0);
 		MemDin           : out   std_logic_vector(7 downto 0);
@@ -104,11 +96,11 @@ entity williams_cpu is
 		SIN_BOMB         : in    std_logic;
 
 		-- To sound board
-		HAND             : in    std_logic := '1';
+		HAND             : out    std_logic;
 		PB               : out   std_logic_vector(5 downto 0);
 		
 		dl_clock         : in    std_logic;
-		dl_addr          : in    std_logic_vector(15 downto 0);
+		dl_addr          : in    std_logic_vector(16 downto 0);
 		dl_data          : in    std_logic_vector(7 downto 0);
 		dl_wr            : in    std_logic
 	);
@@ -474,9 +466,9 @@ begin
             ram_lower_enable <= false;
             ram_upper_enable <= false;
 
-            flash_enable <= false;
+            --flash_enable <= false;
 
-            memory_output_enable <= false;
+            --memory_output_enable <= false;
             memory_write <= false;
             memory_data_out <= (others => '0');
 
@@ -515,7 +507,7 @@ begin
             if clock_12_phase( 0) = '1' or
                clock_12_phase( 4) = '1' or
                clock_12_phase( 8) = '1' then
-                memory_output_enable <= true;
+                --memory_output_enable <= true;
                 ram_enable <= true;
                 ram_lower_enable <= true;
                 ram_upper_enable <= true;
@@ -576,7 +568,7 @@ begin
                         memory_data_out <= blt_data_out;
                         memory_write <= true;
                     else
-                        memory_output_enable <= true;
+                        --memory_output_enable <= true;
                     end if;
 
                     if ram_access then
@@ -585,9 +577,9 @@ begin
                         ram_upper_enable <= blt_en_upper;
                     end if;
 
-                    if rom_access then
-                        flash_enable <= true;
-                    end if;
+                    --if rom_access then
+                    --    flash_enable <= true;
+                    --end if;
 
                     blt_blt_ack <= '1';
                 end if;
@@ -615,7 +607,7 @@ begin
                         memory_data_out <= mpu_data_in;
                         memory_write <= true;
                     else
-                        memory_output_enable <= true;
+                        --memory_output_enable <= true;
                     end if;
 
                     if ram_access or cmos_access or color_table_access then
@@ -624,9 +616,9 @@ begin
                         ram_upper_enable <= true;
                     end if;
 
-                    if rom_access then
-                        flash_enable <= true;
-                    end if;
+                    --if rom_access then
+                    --    flash_enable <= true;
+                    --end if;
 
                     if blt_register_access and write then
                         blt_rs <= address(2 downto 0);
@@ -705,8 +697,8 @@ begin
     --led_bcd_in <= debug_blt_source_address;
 
     -------------------------------------------------------------------
-	 romd4_cs <= '1' when dl_addr(15 downto 9) = "1101010" else '0';
-	 romd6_cs <= '1' when dl_addr(15 downto 9) = "1101011" else '0';
+	 romd4_cs <= '1' when dl_addr(16 downto 9) = "01101010" else '0';
+	 romd6_cs <= '1' when dl_addr(16 downto 9) = "01101011" else '0';
  
 	 -- cpu to video addr decoder
 	 cpu_video_addr_decoder : work.dpram generic map (aWidth => 9, dWidth => 8)
@@ -770,7 +762,7 @@ begin
 
     -------------------------------------------------------------------
 
-    rom_pia_pa_in <= not HAND &
+    rom_pia_pa_in <= rom_pia_pa_out(7) &
                      not SLAM &
                      not C_COIN &
                      not L_COIN &
@@ -778,7 +770,8 @@ begin
                      not R_COIN &
                      not ADVANCE &
                      not AUTO_UP;
-    PB(5 downto 0) <= rom_pia_pb_out(5 downto 0);
+    PB(5 downto 0) <= (rom_pia_pb_out(5 downto 0) or (not rom_pia_pb_dir(5 downto 0)));
+    HAND <= (rom_pia_pa_out(7) or (not rom_pia_pa_dir(7)));
 
     --rom_led_digit(0) <= rom_pia_pb_out(6);
     --rom_led_digit(1) <= rom_pia_pb_out(7);
@@ -804,8 +797,8 @@ begin
             --ca2_oe => rom_pia_ca2_dir,
             irqa => rom_pia_irq_a,
             pa_i => rom_pia_pa_in,
-            --pa_o => rom_pia_pa_out,
-            --pa_oe => rom_pia_pa_dir,
+            pa_o => rom_pia_pa_out,
+            pa_oe => rom_pia_pa_dir,
 
             cb1 => irq_4ms,
             cb2_i => '1',
@@ -813,8 +806,8 @@ begin
             --cb2_oe => rom_pia_cb2_dir,
             irqb => rom_pia_irq_b,
             pb_i => rom_pia_pb_in,
-            pb_o => rom_pia_pb_out
-            --pb_oe => rom_pia_pb_dir
+            pb_o => rom_pia_pb_out,
+            pb_oe => rom_pia_pb_dir
         );
     -------------------------------------------------------------------
 
@@ -937,18 +930,11 @@ begin
 
     -------------------------------------------------------------------
 
-    MemOE <= '0' when memory_output_enable else '1';
     MemWR <= '0' when memory_write else '1';
 
-    RamAdv <= '0';
     RamCS <= '0' when ram_enable else '1';
-    RamClk <= '0';
-    RamCRE <= '0';
     RamLB <= '0' when ram_lower_enable else '1';
     RamUB <= '0' when ram_upper_enable else '1';
-
-    FlashRp <= '1';
-    FlashCS <= '0' when flash_enable else '1';
 
     MemAdr <= memory_address;
     MemDin <= memory_data_out;
