@@ -222,13 +222,13 @@ begin
 							end if;
 
 							if ctrl_span_src = '1' then
-								src_address <= reg_src_base + y_count_next;
+								src_address <= reg_src_base(15 downto 8) & (reg_src_base(7 downto 0) + y_count_next(7 downto 0));
 							else
 								src_address <= src_address + 1;
 							end if;
 
 							if ctrl_span_dst = '1' then
-								dst_address <= reg_dst_base + y_count_next;
+								dst_address <= reg_dst_base(15 downto 8) & (reg_dst_base(7 downto 0) + y_count_next(7 downto 0));
 							else
 								dst_address <= dst_address + 1;
 							end if;
