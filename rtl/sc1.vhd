@@ -180,6 +180,9 @@ begin
 						blt_shift <= (others => '0');
 
 						state <= state_src;
+						if reg_width = 0 or reg_height = 0 then
+							state <= state_idle;
+						end if;
 					end if;
 
 				when state_src =>
@@ -217,7 +220,7 @@ begin
 							x_count <= (others => '0');
 							y_count <= y_count_next;
 
-							if y_count_next = reg_height then
+							if y_count_next >= reg_height then
 								state <= state_idle;
 							end if;
 
