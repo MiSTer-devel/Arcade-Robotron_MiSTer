@@ -323,6 +323,7 @@ reg  [2:0] BTN;
 reg        blitter_sc2, sinistar;
 reg        landscape;
 reg        fourfire;
+reg        speech_en;
 
 always @(*) begin
 
@@ -333,6 +334,7 @@ always @(*) begin
 	blitter_sc2 = 0;
 	sinistar = 0;
 	fourfire = 0;
+	speech_en = 0;
 
 	case (mod)
 		mod_robotron:
@@ -377,6 +379,7 @@ always @(*) begin
 		mod_sinistar:
 			begin
 				sinistar = 1;
+				speech_en = 1;
 				landscape = 0;
 				BTN = { m_start1, m_start2, m_coin1 };
 				JA  = ~{ (amx == 7) ? dmx : amx, (amy == 7) ? dmy : amy };
@@ -385,8 +388,9 @@ always @(*) begin
 		mod_playball:
 			begin
 				landscape = 0;
-				BTN = { m_start2, m_start1, m_coin1 };
-				JA  = ~{ m_fire1a, m_fire1b, m_fire1c, m_fire1d ,m_fire1a, m_right1, m_left1,m_fire1a };
+				speech_en = 1;
+				BTN = { 2'b00, m_coin1 };
+				JA  = ~{ 4'b0000, m_start2, m_right, m_left, m_start1 };
 				JB  = JA;
 			end
 		default: ;
@@ -447,7 +451,7 @@ williams_soc soc
 	.Hsync       ( hs          ),
 	.Vsync       ( vs          ),
 	.audio_out   ( audio       ),
-	.speech_out  ( speech       ),
+	.speech_out  ( speech      ),
 
 	.blitter_sc2 ( blitter_sc2 ),
 	.sinistar    ( sinistar    ),
@@ -545,8 +549,12 @@ arcade_video #(296,240,8) arcade_video
 	.fx(status[5:3])
 );
 
-assign AUDIO_L = {audio, audio};
-assign AUDIO_R = speech;
+///////////////////////////////////////////////////////////////////
+
+wire [16:0] audsum = {1'b0, audio, audio} + {1'b0, speech};
+
+assign AUDIO_L = speech_en ? audsum[16:1] : {audio, audio};
+assign AUDIO_R = AUDIO_L;
 assign AUDIO_S = 0;
 
 endmodule

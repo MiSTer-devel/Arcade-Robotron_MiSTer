@@ -77,7 +77,7 @@ architecture struct of williams_sound_board is
 --      ca2 speech data N/C
 --      cb2 speech clock N/C
 
- signal speech_clk      : std_logic;
+ signal speech_cen      : std_logic;
  signal speech_data     : std_logic;
  
  
@@ -197,14 +197,15 @@ port map
 	pb_oe       => open,
 	cb1       	=> pia_cb1_i,
 	cb2_i      	=> '0',
-	cb2_o       => speech_clk,
+	cb2_o       => speech_cen,
 	cb2_oe      => open
 );
 
 -- CVSD speech decoder	
 IC1: entity work.HC55564	
 port map(	
-	clk => speech_clk,
+	clk => clock,
+	cen => speech_cen,
 	rst => '0', -- Reset is not currently implemented
 	bit_in => speech_data,
 	sample_out(15 downto 0) => speech_out
@@ -234,6 +235,7 @@ use ieee.numeric_std.all;
 entity hc55564 is 
 port(
 	clk        : in std_logic;
+	cen        : in std_logic;
 	rst        : in std_logic;
 	bit_in     : in std_logic;
 	sample_out : out std_logic_vector(15 downto 0)
@@ -251,44 +253,47 @@ architecture hdl of hc55564 is
   constant b   	: integer := ((1 - 1/256)*256); --syllabic decay 1 - 1/256
   signal x   		: unsigned(15 downto 0);  --integrator
   signal s   		: unsigned(15 downto 0);  --syllabic
-  
+  signal old_cen  : std_logic;
 begin
 
 process(clk, rst, bit_in)
 begin
- -- reset ??
-if (rising_edge(clk)) then
-	runofn(2) <= runofn(1);
-	runofn(1) <= runofn(0);
-	runofn(0) <= bit_in;
-	res1 <= x * h;
-	x <= res1(31-8 downto 16-8);     
-	if runofn = "000" or runofn = "111" then
-		s <= s + 40; -- 40
-		if s > to_unsigned(2560,16) then
-			s <= to_unsigned(2560,16);
-		end if;
-	else 
-		res2 <= s * b;
-		s <= res2(31-8 downto 16-8);
-		if s < to_unsigned(40, 16) then
-			s <= to_unsigned(40, 16); --40
+	-- reset ??
+	if rising_edge(clk) then
+		old_cen <= cen;
+		if old_cen = '0' and cen = '1' then
+			runofn(2) <= runofn(1);
+			runofn(1) <= runofn(0);
+			runofn(0) <= bit_in;
+			res1 <= x * h;
+			x <= res1(31-8 downto 16-8);     
+			if runofn = "000" or runofn = "111" then
+				s <= s + 40; -- 40
+				if s > to_unsigned(2560,16) then
+					s <= to_unsigned(2560,16);
+				end if;
+			else 
+				res2 <= s * b;
+				s <= res2(31-8 downto 16-8);
+				if s < to_unsigned(40, 16) then
+					s <= to_unsigned(40, 16); --40
+				end if;
+			end if;
+			if bit_in = '0' then
+				if ( (x - s) > x ) then
+					x <= to_unsigned(0,16);
+				else
+					x <= x - s;
+				end if;
+			else 
+				if ( x + s ) < x then
+					x <= to_unsigned(65535,16);
+				else
+					x <= x + s;
+				end if;
+			end if;
 		end if;
 	end if;
-	if bit_in = '0' then
-		if ( (x - s) > x ) then
-			x <= to_unsigned(0,16);
-		else
-			x <= x - s;
-		end if;
-	else 
-		if ( x + s ) < x then
-			x <= to_unsigned(65535,16);
-		else
-			x <= x + s;
-		end if;
-	end if;
-end if;
 end process;
  
 sample_out <= std_logic_vector(x);
