@@ -16,7 +16,7 @@
 	<rom index="1">
 		<part>7</part>
 	</rom>
-	<rom index="0" zip="playball.zip|alienaru.zip" md5="85f6cdf35c4b23f468dd4cdf50948b3d">
+	<rom index="0" zip="playball.zip" md5="85f6cdf35c4b23f468dd4cdf50948b3d">
 		<part crc="7ba8fd71" name="playball.01"/>
 		<part crc="2387c3d4" name="playball.02"/>
 		<part crc="d34cc5fd" name="playball.03"/>
