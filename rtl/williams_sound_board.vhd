@@ -21,26 +21,22 @@
 ---------------------------------------------------------------------------------
 -- 2020 added speech 
 
-
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.std_logic_unsigned.all;
-use ieee.numeric_std.all;
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_ARITH.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
 entity williams_sound_board is
 port(
 	clock        : in  std_logic;
 	reset        : in  std_logic;
-	hand         : in std_logic;
+	hand         : in  std_logic;
 	select_sound : in  std_logic_vector( 5 downto 0);
 	audio_out    : out std_logic_vector( 7 downto 0);
 	speech_out   : out std_logic_vector(15 downto 0);
-	rom_addr     : out std_logic_vector(11 downto 0);
+	rom_addr     : out std_logic_vector(13 downto 0);
 	rom_do       : in  std_logic_vector( 7 downto 0);
-	sp1_do       : in  std_logic_vector( 7 downto 0);
-	sp2_do       : in  std_logic_vector( 7 downto 0);
-	sp3_do       : in  std_logic_vector( 7 downto 0);
-	sp4_do       : in  std_logic_vector( 7 downto 0);
+	spch_do      : in  std_logic_vector( 7 downto 0);
 	rom_vma      : out std_logic
 );
 end williams_sound_board;
@@ -60,7 +56,6 @@ architecture struct of williams_sound_board is
  
  signal rom_cs    : std_logic;
  signal spch_cs   : std_logic;
- signal spch_do   : std_logic_vector( 7 downto 0);
  signal ce_089    : std_logic;
 
 -- pia port a
@@ -97,7 +92,7 @@ port map
 (
 	CLK     => clock,
 	IN_CLK  => 1200,
-	OUT_CLK => 89,
+	OUT_CLK => 83, -- should be 89 but CPU model works faster than real HW.
 	CE      => ce_089
 );
 
@@ -105,9 +100,9 @@ port map
 -- pia cs
 wram_cs <= '1' when cpu_addr(15 downto  8) = X"00" else '0';                        -- 0000-007F
 pia_cs  <= '1' when cpu_addr(14 downto 12) = "000" and cpu_addr(10) = '1' else '0'; -- 8400-8403 ? => 0400-0403
-spch_cs <= '1' when cpu_addr(15 downto 12) >= X"B" and cpu_addr(15 downto 12) <= X"F" else '0'; -- B000-EFFF
+spch_cs <= '1' when cpu_addr(15 downto 12) >= X"B" and cpu_addr(15 downto 12) <= X"E" else '0'; -- B000-EFFF
 rom_cs  <= '1' when cpu_addr(15 downto 12) = X"F" else '0';                         -- F000-FFFF
-	
+
 -- write enables
 wram_we  <= '1' when cpu_rw = '0' and wram_cs = '1' else '0';
 pia_rw_n <= '0' when cpu_rw = '0' and pia_cs = '1'  else '1'; 
@@ -118,13 +113,6 @@ cpu_di <=
 	pia_do  when pia_cs = '1'  else
 	rom_do  when rom_cs   = '1' else 
 	spch_do when spch_cs  = '1' else X"55";
-
-spch_do <=	
-	sp1_do when cpu_addr(15 downto 12) = "1011"  else
-	sp2_do when cpu_addr(15 downto 12) = "1100"  else
-	sp3_do when cpu_addr(15 downto 12) = "1101"  else
-	sp4_do when cpu_addr(15 downto 12) = "1110"  else
-	x"FF";
 
 -- pia I/O
 audio_out <= pia_pa_o;
@@ -159,7 +147,7 @@ port map(
 );
 
 rom_vma   <= rom_cs and cpu_vma;
-rom_addr  <= cpu_addr(11 downto 0);
+rom_addr  <= (cpu_addr(13 downto 12) - "11") & cpu_addr(11 downto 0);
 
 -- cpu wram 
 cpu_ram : entity work.gen_ram
@@ -233,28 +221,38 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
  
 entity hc55564 is 
-port(
+port
+(
 	clk        : in std_logic;
 	cen        : in std_logic;
 	rst        : in std_logic;
 	bit_in     : in std_logic;
 	sample_out : out std_logic_vector(15 downto 0)
-	);
+);
  
 end hc55564;  
- 
+
 architecture hdl of hc55564 is 
+  constant h   	: integer := (1 - 1/8)  *256; --integrator decay (1 - 1/8) * 256 = 224
+  constant b   	: integer := (1 - 1/256)*256; --syllabic decay (1 - 1/256) * 256 = 255
   
+  constant s_min  : unsigned(15 downto 0) := to_unsigned(40, 16);
+  constant s_max  : unsigned(15 downto 0) := to_unsigned(5120, 16);
+
+  signal runofn_new : std_logic_vector(2 downto 0);
   signal runofn 	: std_logic_vector(2 downto 0);
   signal res1 		: unsigned(31 downto 0);
   signal res2 		: unsigned(31 downto 0);
-  signal res3 		: unsigned(31 downto 0);
-  constant h   	: integer := ((1 - 1/8) *256 ); --integrator decay 1- 1/8 * 256
-  constant b   	: integer := ((1 - 1/256)*256); --syllabic decay 1 - 1/256
+  signal x_new		: unsigned(16 downto 0);
   signal x   		: unsigned(15 downto 0);  --integrator
   signal s   		: unsigned(15 downto 0);  --syllabic
   signal old_cen  : std_logic;
 begin
+
+res1 <= x * h;
+res2 <= s * b;
+runofn_new <= runofn(1 downto 0) & bit_in;
+x_new <= ('0'&res1(23 downto 8)) + s when bit_in = '1' else ('0'&res1(23 downto 8)) - s;
 
 process(clk, rst, bit_in)
 begin
@@ -262,40 +260,28 @@ begin
 	if rising_edge(clk) then
 		old_cen <= cen;
 		if old_cen = '0' and cen = '1' then
-			runofn(2) <= runofn(1);
-			runofn(1) <= runofn(0);
-			runofn(0) <= bit_in;
-			res1 <= x * h;
-			x <= res1(31-8 downto 16-8);     
-			if runofn = "000" or runofn = "111" then
-				s <= s + 40; -- 40
-				if s > to_unsigned(2560,16) then
-					s <= to_unsigned(2560,16);
+			runofn <= runofn_new;
+			if runofn_new = "000" or runofn_new = "111" then
+				s <= s + 40;
+				if (s + 40) > s_max then
+					s <= s_max;
 				end if;
 			else 
-				res2 <= s * b;
-				s <= res2(31-8 downto 16-8);
-				if s < to_unsigned(40, 16) then
-					s <= to_unsigned(40, 16); --40
+				s <= res2(23 downto 8);
+				if res2(23 downto 8) < s_min then
+					s <= s_min;
 				end if;
 			end if;
-			if bit_in = '0' then
-				if ( (x - s) > x ) then
-					x <= to_unsigned(0,16);
-				else
-					x <= x - s;
-				end if;
-			else 
-				if ( x + s ) < x then
-					x <= to_unsigned(65535,16);
-				else
-					x <= x + s;
-				end if;
+
+			if x_new(16) = '1' then
+				x <= (others => bit_in);
+			else
+				x <= x_new(15 downto 0);
 			end if;
 		end if;
 	end if;
 end process;
- 
+
 sample_out <= std_logic_vector(x);
-   
+
 end architecture hdl;

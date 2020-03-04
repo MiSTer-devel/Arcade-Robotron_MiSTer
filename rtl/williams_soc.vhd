@@ -26,9 +26,10 @@
 --
 -----------------------------------------------------------------------
 
-library ieee;
-	use ieee.std_logic_1164.all;
-	use ieee.numeric_std.all;
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_ARITH.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
 entity williams_soc is
 port (
@@ -126,17 +127,11 @@ signal  cpu_q        : std_logic;
 signal  hand         : std_logic;
 signal  select_sound : std_logic_vector( 5 downto 0);
 
-signal  snd_addr     : std_logic_vector(11 downto 0);
+signal  snd_addr     : std_logic_vector(13 downto 0);
 signal  snd_do       : std_logic_vector( 7 downto 0);
-signal  sp1_do       : std_logic_vector( 7 downto 0);
-signal  sp2_do       : std_logic_vector( 7 downto 0);
-signal  sp3_do       : std_logic_vector( 7 downto 0);
-signal  sp4_do       : std_logic_vector( 7 downto 0);
+signal  spch_do      : std_logic_vector( 7 downto 0);
 signal  snd_rom_we   : std_logic;
-signal  spch_rom1_we : std_logic;
-signal  spch_rom2_we : std_logic;
-signal  spch_rom3_we : std_logic;
-signal  spch_rom4_we : std_logic;
+signal  spch_rom_we  : std_logic;
 
 begin
 
@@ -250,7 +245,7 @@ snd_rom : entity work.dpram
 generic map( dWidth => 8, aWidth => 12)
 port map(
 	clk_a  => clock,
-	addr_a => snd_addr,
+	addr_a => snd_addr(11 downto 0),
 	q_a    => snd_do,
 	clk_b  => dl_clock,
 	we_b   => snd_rom_we,
@@ -258,59 +253,20 @@ port map(
 	d_b    => dl_data
 );
 
-sp1_rom : entity work.dpram
-generic map( dWidth => 8, aWidth => 12)
+spch_rom : entity work.dpram
+generic map( dWidth => 8, aWidth => 14)
 port map(
 	clk_a  => clock,
 	addr_a => snd_addr,
-	q_a    => sp1_do,
+	q_a    => spch_do,
 	clk_b  => dl_clock,
-	we_b   => spch_rom1_we,
-	addr_b => dl_addr(11 downto 0),
+	we_b   => spch_rom_we,
+	addr_b => (dl_addr(13 downto 12) - "10") & dl_addr(11 downto 0),
 	d_b    => dl_data
 );
 
-sp2_rom : entity work.dpram
-generic map( dWidth => 8, aWidth => 12)
-port map(
-	clk_a  => clock,
-	addr_a => snd_addr,
-	q_a    => sp2_do,
-	clk_b  => dl_clock,
-	we_b   => spch_rom2_we,
-	addr_b => dl_addr(11 downto 0),
-	d_b    => dl_data
-);
-
-sp3_rom : entity work.dpram
-generic map( dWidth => 8, aWidth => 12)
-port map(
-	clk_a  => clock,
-	addr_a => snd_addr,
-	q_a    => sp3_do,
-	clk_b  => dl_clock,
-	we_b   => spch_rom3_we,
-	addr_b => dl_addr(11 downto 0),
-	d_b    => dl_data
-);
-
-sp4_rom : entity work.dpram
-generic map( dWidth => 8, aWidth => 12)
-port map(
-	clk_a  => clock,
-	addr_a => snd_addr,
-	q_a    => sp4_do,
-	clk_b  => dl_clock,
-	we_b   => spch_rom4_we,
-	addr_b => dl_addr(11 downto 0),
-	d_b    => dl_data
-);
-
-snd_rom_we   <= '1' when dl_wr = '1' and dl_addr(15 downto 12) = x"C" else '0'; -- C000-CFFF
-spch_rom1_we <= '1' when dl_wr = '1' and dl_addr(16 downto 12) = "01110" else '0'; -- 0E000-0EFFF
-spch_rom2_we <= '1' when dl_wr = '1' and dl_addr(16 downto 12) = "01111" else '0'; -- 0F000-0FFFF
-spch_rom3_we <= '1' when dl_wr = '1' and dl_addr(16 downto 12) = "10000" else '0'; -- 10000-10FFF
-spch_rom4_we <= '1' when dl_wr = '1' and dl_addr(16 downto 12) = "10001" else '0'; -- 11000-11FFF
+snd_rom_we  <= '1' when dl_wr = '1' and dl_addr(16 downto 12)  = x"C" else '0'; -- 0C000-0CFFF
+spch_rom_we <= '1' when dl_wr = '1' and dl_addr(16 downto 12) >= x"E" else '0'; -- 0E000-11FFF
 
 -- sound board
 sound_board : entity work.williams_sound_board
@@ -323,10 +279,7 @@ port map(
 	speech_out    => speech_out,
 	rom_addr      => snd_addr,
 	rom_do        => snd_do,
-	sp1_do		  => sp1_do,
-	sp2_do		  => sp2_do,
-	sp3_do		  => sp3_do,
-	sp4_do		  => sp4_do
+	spch_do		  => spch_do
 );
 
 end Behavioral;
