@@ -1044,7 +1044,7 @@ begin
     count_240 <= '1' when video_address(13 downto 10) = "1111" else '0';
 
     horizontal_sync <= '1' when video_address(5 downto 2) = "1110" else '0';
-    vertical_sync <= '1' when video_address(13 downto 9) = "11111" else '0';
+    vertical_sync <= '1' when video_address(13 downto 8) = "111110" else '0';
 
     -------------------------------------------------------------------
     -- LED numeric display
