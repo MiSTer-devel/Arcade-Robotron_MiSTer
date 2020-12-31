@@ -8,7 +8,7 @@
 	<category>Maze</category>
 	<category>Space / Aliens</category>
 	<rbf>robotron</rbf>
-<buttons names="Place,Flush,-,-,Start 1P,Start 2P,Coin" default="A,B,Start,Select,R"/>
+<buttons names="Place,Flush,-,-,-,-,Start 1P,Start 2P,Coin" default="A,B,Start,Select,R"/>
 		<switches default="00">
 		<dip bits="0"   name="Auto Up" ids="Off,On"/>
 		<dip bits="1"   name="Advance" ids="Off,On"/>

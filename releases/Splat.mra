@@ -11,7 +11,7 @@
 		<dip bits="0"   name="Auto Up" ids="Off,On"/>
 		<dip bits="1"   name="Advance" ids="Off,On"/>
 	</switches>
-	<buttons names="Fire Right,Fire Down,Fire Up,Fire Left,Start 1P,Start 2P,Coin" default="A,B,X,Y,Start,Select,R"/>
+	<buttons names="Fire Right,Fire Down,Fire Up,Fire Left,-,-,Start 1P,Start 2P,Coin" default="A,B,X,Y,Start,Select,R"/>
 	<rom index="1">
 		<part>2</part>
 	</rom>

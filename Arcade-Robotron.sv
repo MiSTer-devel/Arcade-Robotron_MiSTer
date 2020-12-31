@@ -136,7 +136,7 @@ localparam CONF_STR = {
 	"-;",
 	"h2O6,Fire,4-way,Move+Fire;",
 	"h2-;",
-	"h3O6,Control,Mode 1,Mode 2;",
+	"h3O67,Control,Mode 1,Mode 2,Cabinet;",
 	"h3-;",
 	"DIP;",
 	"-;",
@@ -215,9 +215,9 @@ wire reset = RESET | status[0] | buttons[1] | rom_download;
 
 ///////////////////////////////////////////////////////////////////
 
-wire m_start1  = joy[8];
-wire m_start2  = joy[9];
-wire m_coin1   = joy[10];
+wire m_start1  = joy[10];
+wire m_start2  = joy[11];
+wire m_coin1   = joy[12];
 
 wire m_right1  = joy1[0];
 wire m_left1   = joy1[1];
@@ -227,6 +227,8 @@ wire m_fire1a  = joy1[4];
 wire m_fire1b  = joy1[5];
 wire m_fire1c  = joy1[6];
 wire m_fire1d  = joy1[7];
+wire m_fire1e  = joy1[8];
+wire m_fire1f  = joy1[9];
 //wire m_rcw1    =              joy1[8];
 //wire m_rccw1   =              joy1[9];
 //wire m_spccw1  =              joy1[30];
@@ -240,6 +242,8 @@ wire m_fire2a  = joy2[4];
 wire m_fire2b  = joy2[5];
 wire m_fire2c  = joy2[6];
 wire m_fire2d  = joy2[7];
+wire m_fire2e  = joy2[8];
+wire m_fire2f  = joy2[9];
 //wire m_rcw2    =              joy2[8];
 //wire m_rccw2   =              joy2[9];
 //wire m_spccw2  =              joy2[30];
@@ -253,6 +257,8 @@ wire m_fire_a  = m_fire1a | m_fire2a;
 wire m_fire_b  = m_fire1b | m_fire2b;
 wire m_fire_c  = m_fire1c | m_fire2c;
 wire m_fire_d  = m_fire1d | m_fire2d;
+wire m_fire_e  = m_fire1e | m_fire2e;
+wire m_fire_f  = m_fire1f | m_fire2f;
 //wire m_rcw     = m_rcw1   | m_rcw2;
 //wire m_rccw    = m_rccw1  | m_rccw2;
 //wire m_spccw   = m_spccw1 | m_spccw2;
@@ -328,7 +334,7 @@ always @(*) begin
 		mod_stargate:
 			begin
 				BTN = { m_start2, m_start1, m_coin1 };
-				JA  = ~{ m_start1, m_up, m_down, status[6] ? (sg_state ? m_right : m_left) : (m_left | m_right), m_fire_d, m_fire_c, status[6] ? (sg_state ? m_left : m_right) : m_fire_b, m_fire_a };
+				JA  = ~{ m_fire_f, m_up, m_down, (status[7:6]==2'b10)? m_fire_e : (status[6] ? (sg_state ? m_right : m_left) : (m_left | m_right)), m_fire_d, m_fire_c, status[6] ? (sg_state ? m_left : m_right) : m_fire_b, m_fire_a };
 				JB  = JA;
 			end
 		mod_alienar:

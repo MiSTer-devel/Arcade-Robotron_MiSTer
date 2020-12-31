@@ -12,7 +12,7 @@
 		<dip bits="0"   name="Auto Up" ids="Off,On"/>
 		<dip bits="1"   name="Advance" ids="Off,On"/>
 	</switches>
-	<buttons names="Flap,-,-,-,Start 1P,Start 2P,Coin" default="A,Start,Select,R"/>
+	<buttons names="Flap,-,-,-,-,-,Start 1P,Start 2P,Coin" default="A,Start,Select,R"/>
 	<rom index="1">
 		<part>1</part>
 	</rom>
