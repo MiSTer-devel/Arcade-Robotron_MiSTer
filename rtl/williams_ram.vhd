@@ -18,7 +18,10 @@ port (
 	dn_clock : in  std_logic;
 	dn_addr	: in  std_logic_vector(15 downto 0);
 	dn_data	: in  std_logic_vector(7 downto 0);
-	dn_wr	   : in  std_logic
+	dn_wr	   : in  std_logic;
+   dn_din   : out  std_logic_vector(7 downto 0);
+   dn_nvram : in  std_logic
+
 	);
 end;
 
@@ -53,8 +56,10 @@ begin
 	ram_data(3 downto 0) <= ram_out(3 downto 0) when ENL = '1' else "0000";
 	
 	cmos_cs  <= '1' when ADDR(15 downto 10) = "110011" else '0';
-	dl_cs <= '1' when dn_addr(15 downto 10) = "110100" else '0';
-
+	dl_cs <= '1' when (dn_addr(15 downto 10) = "110100") or (dn_nvram='1') else '0';
+	
+	
+	
 	-- cmos ram 
 	cmos_ram : entity work.dpram
 	generic map( dWidth => 8, aWidth => 10)
@@ -64,6 +69,7 @@ begin
 		we_a    => dn_wr and dl_cs,
 		addr_a  => dn_addr(9 downto 0),
 		d_a     => dn_data,
+		q_a     => dn_din,
 	
 		clk_b   => CLK,
 		addr_b  => ADDR(9 downto 0),

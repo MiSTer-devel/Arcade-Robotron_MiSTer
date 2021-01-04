@@ -92,7 +92,7 @@ port map
 (
 	CLK     => clock,
 	IN_CLK  => 1200,
-	OUT_CLK => 83, -- should be 89 but CPU model works faster than real HW.
+	OUT_CLK => 89, -- should be 89 but CPU model works faster than real HW.
 	CE      => ce_089
 );
 

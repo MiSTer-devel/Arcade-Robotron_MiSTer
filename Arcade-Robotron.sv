@@ -119,6 +119,7 @@ assign USER_OUT  = '1;
 assign LED_USER  = ioctl_download;
 assign LED_DISK  = 0;
 assign LED_POWER = 0;
+assign {FB_PAL_CLK, FB_FORCE_BLANK, FB_PAL_ADDR, FB_PAL_DOUT, FB_PAL_WR} = '0;
 
 wire [1:0] ar = status[17:16];
 
@@ -166,9 +167,11 @@ wire        forced_scandoubler;
 wire        direct_video;
 
 wire        ioctl_download;
+wire        ioctl_upload;
 wire        ioctl_wr;
 wire [24:0] ioctl_addr;
 wire  [7:0] ioctl_dout;
+wire  [7:0] ioctl_din;
 wire  [7:0] ioctl_index;
 wire  [7:0] ioctl_data;
 wire        ioctl_wait;
@@ -196,9 +199,11 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 	.direct_video(direct_video),
 
 	.ioctl_download(ioctl_download),
+	.ioctl_upload(ioctl_upload),
 	.ioctl_wr(ioctl_wr),
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_dout),
+	.ioctl_din(ioctl_din),
 	.ioctl_index(ioctl_index),
 	.ioctl_wait(ioctl_wait),
 
@@ -218,6 +223,8 @@ wire reset = RESET | status[0] | buttons[1] | rom_download;
 wire m_start1  = joy[10];
 wire m_start2  = joy[11];
 wire m_coin1   = joy[12];
+wire m_advance = joy[13];
+wire m_autoup  = joy[14];
 
 wire m_right1  = joy1[0];
 wire m_left1   = joy1[1];
@@ -286,6 +293,7 @@ always @(posedge clk_sys) if (ioctl_wr && (ioctl_index==254) && !ioctl_addr[24:3
 
 reg  [7:0] JA;
 reg  [7:0] JB;
+reg  [7:0] SW;
 reg  [2:0] BTN;
 reg        blitter_sc2, sinistar;
 reg        landscape;
@@ -302,6 +310,7 @@ always @(*) begin
 	sinistar = 0;
 	fourfire = 0;
 	speech_en = 0;
+	SW  = sw[0] | { 6'b0,m_advance,m_autoup};
 
 	case (mod)
 		mod_robotron:
@@ -310,6 +319,7 @@ always @(*) begin
 				BTN = { m_start1, m_start2, m_coin1 };
 				JA  = ~{ status[6] ? {m_right, m_left, m_down, m_up} : {m_fire_a, m_fire_d, m_fire_b, m_fire_c}, m_right, m_left, m_down, m_up };
 				JB  = JA;
+
 			end
 		mod_joust:
 			begin
@@ -427,7 +437,7 @@ williams_soc soc
 	.BTN         ( {BTN[2:0],reset} ),
 	.SIN_FIRE    ( ~m_fire_a   ),
 	.SIN_BOMB    ( ~m_fire_b   ),
-	.SW          ( sw[0]       ),
+	.SW          ( SW          ),
 	.JA          ( JA          ),
 	.JB          ( JB          ),
 
@@ -442,7 +452,8 @@ williams_soc soc
 	.dl_clock    ( clk_sys     ),
 	.dl_addr     ( ioctl_addr[16:0] ),
 	.dl_data     ( ioctl_dout  ),
-	.dl_wr       ( ioctl_wr & rom_download )
+	.dl_wr       ( ioctl_wr & rom_download ),
+	.dl_upload   ( ioctl_upload )
 );
 
 wire [7:0] rom_do;
@@ -472,7 +483,9 @@ williams_ram ram
 	.dn_clock(clk_sys),
 	.dn_addr(ioctl_addr[15:0]),
 	.dn_data(ioctl_dout),
-	.dn_wr(ioctl_wr & rom_download)
+	.dn_wr(ioctl_wr & (rom_download|ioctl_index=='d4) ),
+	.dn_din(ioctl_din),
+	.dn_nvram(ioctl_index=='d4)
 );
 
 ///////////////////////////////////////////////////////////////////

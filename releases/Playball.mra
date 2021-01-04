@@ -9,10 +9,8 @@
 	<category>Space / Fighter</category>
 	<rbf>robotron</rbf>
 	<switches default="00">
-		<dip bits="0" name="Auto Up" ids="Off,On"/>
-		<dip bits="1" name="Advance" ids="Off,On"/>
 	</switches>
-	<buttons names="-,-,-,-,-,-,Start 1P,Start 2P,Coin" default="Start,Select,R"/>
+	<buttons names="-,-,-,-,-,-,Start 1P,Start 2P,Coin,Advance,Auto Up" default="Start,Select,R"/>
 	<rom index="1">
 		<part>7</part>
 	</rom>
@@ -105,4 +103,5 @@
 		<part crc="8bfebf87" name="speech.ic6"/>
 		<part crc="db351db6" name="speech.ic7"/>
 	</rom>
+	<nvram index="4" size="1024"/>
 </misterromdescription>

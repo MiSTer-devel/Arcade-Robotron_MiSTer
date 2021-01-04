@@ -9,10 +9,8 @@
 	<category>Platform</category>
 	<rbf>robotron</rbf>
 	<switches default="00">
-		<dip bits="0"   name="Auto Up" ids="Off,On"/>
-		<dip bits="1"   name="Advance" ids="Off,On"/>
 	</switches>
-	<buttons names="Flap,-,-,-,-,-,Start 1P,Start 2P,Coin" default="A,Start,Select,R"/>
+	<buttons names="Flap,-,-,-,-,-,Start 1P,Start 2P,Coin,Advance,Auto Up" default="A,Start,Select,R"/>
 	<rom index="1">
 		<part>1</part>
 	</rom>
@@ -99,4 +97,5 @@ f1f3f1f800fdf2fef2f5f2f9f5f1f5f2
 		<part crc="e6631c23" name="decoder.4"/>
 		<part crc="83faf25e" name="decoder.6"/>
 	</rom>
+	<nvram index="4" size="1024"/>
 </misterromdescription>
