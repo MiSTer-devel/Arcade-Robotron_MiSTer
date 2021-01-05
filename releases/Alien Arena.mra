@@ -8,10 +8,8 @@
 	<category>Maze</category>
 	<category>Space / Aliens</category>
 	<rbf>robotron</rbf>
-<buttons names="Place,Flush,-,-,Start 1P,Start 2P,Coin" default="A,B,Start,Select,R"/>
+<buttons names="Place,Flush,-,-,-,-,Start 1P,Start 2P,Coin,Advance,Auto Up" default="A,B,Start,Select,R"/>
 		<switches default="00">
-		<dip bits="0"   name="Auto Up" ids="Off,On"/>
-		<dip bits="1"   name="Advance" ids="Off,On"/>
 	</switches>
 	<rom index="1">
 		<part>5</part>
@@ -100,4 +98,6 @@
 		<part crc="e6631c23" name="decoder.4"/>
 		<part crc="83faf25e" name="decoder.6"/>
 	</rom>
+	<nvram index="4" size="1024"/>
+
 </misterromdescription>

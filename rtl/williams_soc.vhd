@@ -78,7 +78,8 @@ port (
 	dl_clock         : in    std_logic;
 	dl_addr          : in    std_logic_vector(16 downto 0);
 	dl_data          : in    std_logic_vector(7 downto 0);
-	dl_wr            : in    std_logic
+	dl_wr            : in    std_logic;
+	dl_upload        : in    std_logic
 );
 end williams_soc;
 
@@ -148,7 +149,7 @@ port map (
 	LIC              => cpu_lic,
 	AVMA             => cpu_avma,
 	RnW              => cpu_rwn,
-	nHALT            => cpu_halt_n,
+	nHALT            => cpu_halt_n and not dl_upload,
 	BA               => cpu_ba,
 	BS               => cpu_bs,
 	BUSY             => cpu_busy,
