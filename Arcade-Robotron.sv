@@ -204,7 +204,7 @@ localparam CONF_STR = {
 	"-;",
 	"h2O6,Fire,4-way,Move+Fire;",
 	"h3O67,Control,Mode 1,Mode 2,Cabinet;",
-	"h4O67,Control,ABXY Fire,Move with Fire,Two Joysticks;",
+	"h4O67,Fire,4-way,Move with Fire,Second Joystick;",
 	"h2h3h4-;",
 	"DIP;",
 	"-;",
