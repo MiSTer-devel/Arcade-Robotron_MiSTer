@@ -136,11 +136,9 @@ localparam CONF_STR = {
 	"O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
 	"-;",
 	"h2O6,Fire,4-way,Move+Fire;",
-	"h2-;",
 	"h3O67,Control,Mode 1,Mode 2,Cabinet;",
-	"h3-;",
-	"h4O6,Fire,4-way,Dual-Stick;",
-	"h4-;",
+	"h4O67,Control,ABXY Fire,Move with Fire,Two Joysticks;",
+	"h2h3h4-;",
 	"DIP;",
 	"-;",
 	"R0,Reset;",
@@ -195,7 +193,7 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 
 	.buttons(buttons),
 	.status(status),
-	.status_menumask({dualstick,mod == mod_stargate,fourfire,landscape,direct_video}),
+	.status_menumask({mod == mod_robotron,mod == mod_stargate,mod == mod_splat,landscape,direct_video}),
 	.forced_scandoubler(forced_scandoubler),
 	.gamma_bus(gamma_bus),
 	.direct_video(direct_video),
@@ -299,8 +297,6 @@ reg  [7:0] SW;
 reg  [2:0] BTN;
 reg        blitter_sc2, sinistar;
 reg        landscape;
-reg        fourfire;
-reg        dualstick;
 reg        speech_en;
 
 always @(*) begin
@@ -311,19 +307,16 @@ always @(*) begin
 	BTN = 0;
 	blitter_sc2 = 0;
 	sinistar = 0;
-	fourfire = 0;
-	dualstick = 0;
 	speech_en = 0;
 	SW  = sw[0] | { 6'b0,m_advance,m_autoup};
 
 	case (mod)
 		mod_robotron:
 			begin
-				dualstick = 1;
 				BTN = { m_start1, m_start2, m_coin1 };
-				JA  = ~{ status[6] ? {m_right2, m_left2, m_down2, m_up2} : {m_fire_a, m_fire_d, m_fire_b, m_fire_c}, m_right1, m_left1, m_down1, m_up1 };
+				JA  = ~{ status[7] ? {m_right2, m_left2, m_down2, m_up2} : status[6] ? {m_right, m_left, m_down, m_up} : {m_fire_a, m_fire_d, m_fire_b, m_fire_c},
+							status[7] ? {m_right1, m_left1, m_down1, m_up1} : {m_right, m_left, m_down, m_up}};
 				JB  = JA;
-
 			end
 		mod_joust:
 			begin
@@ -333,7 +326,6 @@ always @(*) begin
 			end
 		mod_splat:
 			begin
-				fourfire = 1;
 				blitter_sc2 = 1;
 				BTN = { m_start1, m_start2, m_coin1 };
 				JA  = ~{ status[6] ? {m_right1, m_left1, m_down1, m_up1} : {m_fire1a, m_fire1d, m_fire1b, m_fire1c}, m_right1, m_left1, m_down1, m_up1 };
