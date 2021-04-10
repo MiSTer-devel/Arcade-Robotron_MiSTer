@@ -34,6 +34,7 @@ library ieee;
 entity sc1 is
 port(
 	clk             : in    std_logic;
+	blt_slow        :	out   boolean;
 	sc2             : in    std_logic;
 	clip            : in    std_logic_vector(15 downto 0) := x"C000";
 
@@ -120,6 +121,11 @@ begin
 
 	x_count_next    <= x_count + 1;
 	y_count_next    <= y_count + 1;
+	
+	-- Hack, slow mode should be synced to E but (almost) same functionality can be accomplished
+	-- by letting the cpu board time divider know we should only be allowed access half the time...
+	-- test blits 20k 16x16 blit in normal and same with slow flag match mame timing now
+	blt_slow          <= ctrl_slow = '1';
 
 	-- break out control reg into individual signals
 	ctrl_no_upper   <= reg_ctrl(7);
@@ -127,7 +133,7 @@ begin
 	ctrl_shift      <= reg_ctrl(5);
 	ctrl_solid      <= reg_ctrl(4);
 	ctrl_foreground <= reg_ctrl(3);
-	--ctrl_slow       <= reg_ctrl(2);
+	ctrl_slow       <= reg_ctrl(2);
 	ctrl_span_dst   <= reg_ctrl(1);
 	ctrl_span_src   <= reg_ctrl(0);
 

@@ -306,6 +306,7 @@ architecture Behavioral of williams_cpu is
     signal blt_en_lower         : boolean := false;
     signal blt_en_upper         : boolean := false;
     signal blt_win_en           : std_logic := '0';
+	 signal blt_slow             : boolean := false;
     
     -------------------------------------------------------------------
 
@@ -550,7 +551,7 @@ begin
             -- NOTE: the next cycle must be a read if coming from RAM, since the
             -- RAM WE# needs to deassert for a time in order for another write to
             -- take place.
-            if clock_12_phase(11) = '1' or clock_12_phase(1) = '1' then
+            if (clock_12_phase(11) = '1' and blt_slow = false)  or clock_12_phase(1) = '1' then
                 if mpu_halted then
                     if ram_access and not hiram_access then
                         if pseudo_address(15 downto 14) = "11" then
@@ -736,6 +737,7 @@ begin
     blt: entity work.sc1
         port map(
             clk => clock,
+				blt_slow => blt_slow,
 				sc2 => blitter_sc2,
 				clip => x"7400",
 				win_en => blt_win_en and sinistar,
