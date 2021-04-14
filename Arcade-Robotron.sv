@@ -565,8 +565,8 @@ always @(posedge clk_sys) begin
 	if (pcnt[10:1] == 336) HBlank <= 1;
 	if (pcnt[10:1] == 040) HBlank <= 0;
 
-	if (lcnt == 246) VBlank <= 1;
-	if (lcnt == 006) VBlank <= 0;
+	if (lcnt == 256) VBlank <= 1;
+	if (lcnt == 016) VBlank <= 0;
 end
 
 wire rotate_ccw = 1;
