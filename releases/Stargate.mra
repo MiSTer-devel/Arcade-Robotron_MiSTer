@@ -9,7 +9,7 @@
 	<rbf>robotron</rbf>
 	<switches default="00">
 	</switches>
-	<buttons names="Fire,Thrust,Smart Bomb,Hyperspace,Reverse,Inviso,Start 1P,Start 2P,Coin,Advance,Auto Up" default="A,B,X,Y,L,-,Start,Select,R"/>
+	<buttons names="Fire,Thrust,Smart Bomb,Hyperspace,Reverse,Inviso,Start 1P,Start 2P,Coin,Advance,Auto Up,Pause" default="A,B,X,Y,L,-,Start,Select,R,-,-,C"/>
 	<rom index="1">
 		<part>4</part>
 	</rom>

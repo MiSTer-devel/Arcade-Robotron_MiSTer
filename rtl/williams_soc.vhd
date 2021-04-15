@@ -73,7 +73,7 @@ port (
 	JA               : in    std_logic_vector(7 downto 0);
 	JB               : in    std_logic_vector(7 downto 0);
 	
-	
+	pause            : in    std_logic;
 	
 	dl_clock         : in    std_logic;
 	dl_addr          : in    std_logic_vector(16 downto 0);
@@ -149,7 +149,7 @@ port map (
 	LIC              => cpu_lic,
 	AVMA             => cpu_avma,
 	RnW              => cpu_rwn,
-	nHALT            => cpu_halt_n and not dl_upload,
+	nHALT            => cpu_halt_n and (not dl_upload) and (not pause),
 	BA               => cpu_ba,
 	BS               => cpu_bs,
 	BUSY             => cpu_busy,

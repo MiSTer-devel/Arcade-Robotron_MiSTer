@@ -10,7 +10,7 @@
 	<rbf>robotron</rbf>
 	<switches default="00">
 	</switches>
-	<buttons names="Flap,-,-,-,-,-,Start 1P,Start 2P,Coin,Advance,Auto Up" default="A,Start,Select,R"/>
+	<buttons names="Flap,-,-,-,-,-,Start 1P,Start 2P,Coin,Advance,Auto Up,Pause" default="A,Start,Select,R,-,-,C"/>
 	<rom index="1">
 		<part>1</part>
 	</rom>

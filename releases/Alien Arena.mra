@@ -8,7 +8,7 @@
 	<category>Maze</category>
 	<category>Space / Aliens</category>
 	<rbf>robotron</rbf>
-<buttons names="Place,Flush,-,-,-,-,Start 1P,Start 2P,Coin,Advance,Auto Up" default="A,B,Start,Select,R"/>
+<buttons names="Place,Flush,-,-,-,-,Start 1P,Start 2P,Coin,Advance,Auto Up,Pause" default="A,B,Start,Select,R,-,-,C"/>
 		<switches default="00">
 	</switches>
 	<rom index="1">
