@@ -56,7 +56,7 @@ module emu
 	input  [11:0] HDMI_WIDTH,
 	input  [11:0] HDMI_HEIGHT,
 
-`ifdef USE_FB
+`ifdef MISTER_FB
 	// Use framebuffer in DDRAM (USE_FB=1 in qsf)
 	// FB_FORMAT:
 	//    [2:0] : 011=8bpp(palette) 100=16bpp 101=24bpp 110=32bpp
@@ -74,6 +74,7 @@ module emu
 	input         FB_LL,
 	output        FB_FORCE_BLANK,
 
+`ifdef MISTER_FB_PALETTE
 	// Palette control for 8bit modes.
 	// Ignored for other video modes.
 	output        FB_PAL_CLK,
@@ -81,6 +82,7 @@ module emu
 	output [23:0] FB_PAL_DOUT,
 	input  [23:0] FB_PAL_DIN,
 	output        FB_PAL_WR,
+`endif
 `endif
 
 	output        LED_USER,  // 1 - ON, 0 - OFF.
@@ -112,7 +114,6 @@ module emu
 	output        SD_CS,
 	input         SD_CD,
 
-`ifdef USE_DDRAM
 	//High latency DDR3 RAM interface
 	//Use for non-critical time purposes
 	output        DDRAM_CLK,
@@ -125,9 +126,7 @@ module emu
 	output [63:0] DDRAM_DIN,
 	output  [7:0] DDRAM_BE,
 	output        DDRAM_WE,
-`endif
 
-`ifdef USE_SDRAM
 	//SDRAM interface with lower latency
 	output        SDRAM_CLK,
 	output        SDRAM_CKE,
@@ -140,10 +139,10 @@ module emu
 	output        SDRAM_nCAS,
 	output        SDRAM_nRAS,
 	output        SDRAM_nWE,
-`endif
 
-`ifdef DUAL_SDRAM
+`ifdef MISTER_DUAL_SDRAM
 	//Secondary SDRAM
+	//Set all output SDRAM_* signals to Z ASAP if SDRAM2_EN is 0
 	input         SDRAM2_EN,
 	output        SDRAM2_CLK,
 	output [12:0] SDRAM2_A,
@@ -173,20 +172,22 @@ module emu
 	input         OSD_STATUS
 );
 
+///////// Default values for ports not used in this core /////////
+
 assign ADC_BUS  = 'Z;
 assign USER_OUT = '1;
 assign {UART_RTS, UART_TXD, UART_DTR} = 0;
 assign {SD_SCK, SD_MOSI, SD_CS} = 'Z;
-assign BUTTONS = 0;
-assign AUDIO_MIX = 0;
-
+assign {SDRAM_DQ, SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = 'Z;
 assign VGA_F1    = 0;
 assign VGA_SCALER =0;
-assign USER_OUT  = '1;
+assign AUDIO_MIX = 0;
 assign LED_USER  = ioctl_download;
 assign LED_DISK  = 0;
 assign LED_POWER = 0;
-assign {FB_PAL_CLK, FB_FORCE_BLANK, FB_PAL_ADDR, FB_PAL_DOUT, FB_PAL_WR} = '0;
+assign BUTTONS = 0;
+
+assign FB_FORCE_BLANK = '0;
 
 wire [1:0] ar = status[17:16];
 
@@ -208,8 +209,12 @@ localparam CONF_STR = {
 	"h2h3h4-;",
 	"DIP;",
 	"-;",
+	"P1,Pause options;",
+	"P1OP,Pause when OSD is open,On,Off;",
+	"P1OQ,Dim video after 10s,On,Off;",
+	"-;",
 	"R0,Reset;",
-	"J1,Fire 1,Fire 2,Fire 3,Fire 4,Start 1P,Start 2P,Coin;",
+	"J1,Fire 1,Fire 2,Fire 3,Fire 4,Start 1P,Start 2P,Coin,Pause;",
 	"V,v",`BUILD_DATE
 };
 
@@ -292,6 +297,7 @@ wire m_start2  = joy[11];
 wire m_coin1   = joy[12];
 wire m_advance = joy[13];
 wire m_autoup  = joy[14];
+wire m_pause   = joy[15];
 
 wire m_right1  = joy1[0];
 wire m_left1   = joy1[1];
@@ -326,6 +332,16 @@ wire m_fire_d  = m_fire1d | m_fire2d;
 wire m_fire_e  = m_fire1e | m_fire2e;
 wire m_fire_f  = m_fire1f | m_fire2f;
 
+// PAUSE SYSTEM
+wire				pause_cpu;
+wire [7:0]		rgb_out;
+pause #(3,3,2,12) pause (
+	.*,
+	.user_button(m_pause),
+	.pause_request(1'b0),
+	.options(~status[26:25])
+);
+
 ///////////////////////////////////////////////////////////////////
 
 localparam mod_robotron = 0;
@@ -352,7 +368,7 @@ reg  [7:0] SW;
 reg  [2:0] BTN;
 reg        blitter_sc2, sinistar;
 reg        landscape;
-reg        speech_en;
+
 
 always @(*) begin
 
@@ -362,7 +378,6 @@ always @(*) begin
 	BTN = 0;
 	blitter_sc2 = 0;
 	sinistar = 0;
-	speech_en = 0;
 	SW  = sw[0] | { 6'b0,m_advance,m_autoup};
 
 	case (mod)
@@ -407,7 +422,6 @@ always @(*) begin
 		mod_sinistar:
 			begin
 				sinistar = 1;
-				speech_en = 1;
 				landscape = 0;
 				BTN = { m_start1, m_start2, m_coin1 };
 				JA  = ~{ (amx == 7) ? dmx : amx, (amy == 7) ? dmy : amy };
@@ -416,7 +430,6 @@ always @(*) begin
 		mod_playball:
 			begin
 				landscape = 0;
-				speech_en = 1;
 				BTN = { 2'b00, m_coin1 };
 				JA  = ~{ 4'b0000, m_start2, m_right, m_left, m_start1 };
 				JB  = JA;
@@ -500,6 +513,8 @@ williams_soc soc
 	.RamLB       ( ramlb       ),
 	.RamUB       ( ramub       ),
 
+	.pause       ( pause_cpu   ),
+
 	.dl_clock    ( clk_sys     ),
 	.dl_addr     ( ioctl_addr[16:0] ),
 	.dl_data     ( ioctl_dout  ),
@@ -565,8 +580,8 @@ always @(posedge clk_sys) begin
 	if (pcnt[10:1] == 336) HBlank <= 1;
 	if (pcnt[10:1] == 040) HBlank <= 0;
 
-	if (lcnt == 246) VBlank <= 1;
-	if (lcnt == 006) VBlank <= 0;
+	if (lcnt == 256) VBlank <= 1;
+	if (lcnt == 013) VBlank <= 0;
 end
 
 wire rotate_ccw = 1;
@@ -576,7 +591,7 @@ arcade_video #(296,8) arcade_video
 (
 	.*,
 	.clk_video(clk_vid),
-	.RGB_in({r,g,b}),
+	.RGB_in(rgb_out),
 	.HSync(hs),
 	.VSync(vs),
 	.fx(status[5:3])
@@ -584,9 +599,9 @@ arcade_video #(296,8) arcade_video
 
 ///////////////////////////////////////////////////////////////////
 
-wire [16:0] audsum = {1'b0, audio, audio} + {1'b0, speech};
-
-assign AUDIO_L = speech_en ? audsum[16:1] : {audio, audio};
+logic [16:0] audsum;
+assign audsum = {audio, 8'd0} + speech;
+assign AUDIO_L = {1'b0, audsum[16:3]};
 assign AUDIO_R = AUDIO_L;
 assign AUDIO_S = 0;
 
