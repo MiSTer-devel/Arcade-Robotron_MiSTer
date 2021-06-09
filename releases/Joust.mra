@@ -1,33 +1,52 @@
 <misterromdescription>
-	<name>Joust (White-Green label)</name>
-	<mameversion>0218</mameversion>
-	<setname>joust</setname>
-	<mratimestamp>20200219233909</mratimestamp>
+	<name>Joust</name>
+	<region></region>
+	<homebrew>no</homebrew>
+	<bootleg>no</bootleg>
+	<version></version>
+	<alternative></alternative>
+	<platform></platform>
+	<series></series>
 	<year>1982</year>
 	<manufacturer>Williams</manufacturer>
-	<category>Maze / Chicken</category>
-	<category>Platform</category>
+	<category>Arena</category>
+
+	<setname>joust</setname>
+	<parent>joust</parent>
+	<mameversion>0218</mameversion>
 	<rbf>robotron</rbf>
+	<about></about>
+
+	<resolution>15kHz</resolution>
+	<rotation>horizontal</rotation>
+	<flip></flip>
+
+	<players>2 (simultaneous)</players>
+	<joystick>2-way horizontal</joystick>
+	<special_controls></special_controls>
+	<num_buttons>1</num_buttons>
+	<buttons default="A,Start,Select,R,-,-,C" names="Flap,-,-,-,-,-,Start 1P,Start 2P,Coin,Advance,Auto Up,Pause"></buttons>
+
 	<switches default="00">
-	</switches>
-	<buttons names="Flap,-,-,-,-,-,Start 1P,Start 2P,Coin,Advance,Auto Up,Pause" default="A,Start,Select,R,-,-,C"/>
+		</switches>
+
 	<rom index="1">
 		<part>1</part>
-	</rom>
-	<rom index="0" zip="joust.zip" md5="15f0b30141e1588512afb930a9c5d5b0">
-		<part crc="fe41b2af" name="3006-13.1b"/>
-		<part crc="501c143c" name="3006-14.2b"/>
-		<part crc="43f7161d" name="3006-15.3b"/>
-		<part crc="db5571b6" name="3006-16.4b"/>
-		<part crc="c686bb6b" name="3006-17.5b"/>
-		<part crc="fac5f2cf" name="3006-18.6b"/>
-		<part crc="81418240" name="3006-19.7b"/>
-		<part crc="ba5359ba" name="3006-20.8b"/>
-		<part crc="39643147" name="3006-21.9b"/>
-		<part crc="3f1c4f89" name="3006-22.10b"/>
-		<part crc="ea48b359" name="3006-23.11b"/>
-		<part crc="c710717b" name="3006-24.12b"/>
-		<part crc="f1835bdd" name="joust.snd"/>
+		</rom>
+	<rom index="0" md5="15f0b30141e1588512afb930a9c5d5b0" zip="joust.zip">
+		<part crc="fe41b2af" name="3006-13.1b"></part>
+		<part crc="501c143c" name="3006-14.2b"></part>
+		<part crc="43f7161d" name="3006-15.3b"></part>
+		<part crc="db5571b6" name="3006-16.4b"></part>
+		<part crc="c686bb6b" name="3006-17.5b"></part>
+		<part crc="fac5f2cf" name="3006-18.6b"></part>
+		<part crc="81418240" name="3006-19.7b"></part>
+		<part crc="ba5359ba" name="3006-20.8b"></part>
+		<part crc="39643147" name="3006-21.9b"></part>
+		<part crc="3f1c4f89" name="3006-22.10b"></part>
+		<part crc="ea48b359" name="3006-23.11b"></part>
+		<part crc="c710717b" name="3006-24.12b"></part>
+		<part crc="f1835bdd" name="joust.snd"></part>
 		<part>
 f20000f500f100f300f100f400f100f1
 0000000000f500f30000000000000000
@@ -94,8 +113,16 @@ f1f3f1f800fdf2fef2f5f2f9f5f1f5f2
 00000000000000000000000000000000
 00000000000000000000000000000000
 		</part>
-		<part crc="e6631c23" name="decoder.4"/>
-		<part crc="83faf25e" name="decoder.6"/>
-	</rom>
-	<nvram index="4" size="1024"/>
+		<part crc="e6631c23" name="decoder.4"></part>
+		<part crc="83faf25e" name="decoder.6"></part>
+		</rom>
+	<rom index="2"></rom>
+	<rom index="3"></rom>
+	<rom index="4"></rom>
+
+	<nvram index="4" size="1024"></nvram>
+
+	<remark></remark>
+
+	<mratimestamp>20210430005030</mratimestamp>
 </misterromdescription>
