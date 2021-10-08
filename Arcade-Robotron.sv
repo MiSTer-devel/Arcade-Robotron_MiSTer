@@ -55,6 +55,7 @@ module emu
 
 	input  [11:0] HDMI_WIDTH,
 	input  [11:0] HDMI_HEIGHT,
+	output        HDMI_FREEZE,
 
 `ifdef MISTER_FB
 	// Use framebuffer in DDRAM (USE_FB=1 in qsf)
@@ -186,14 +187,13 @@ assign LED_USER  = ioctl_download;
 assign LED_DISK  = 0;
 assign LED_POWER = 0;
 assign BUTTONS = 0;
-
 assign FB_FORCE_BLANK = '0;
+assign HDMI_FREEZE = 0;
 
 wire [1:0] ar = status[17:16];
 
 assign VIDEO_ARX = (!ar) ? ((status[2] | landscape) ? 8'd4 : 8'd3) : (ar - 1'd1);
 assign VIDEO_ARY = (!ar) ? ((status[2] | landscape) ? 8'd3 : 8'd4) : 12'd0;
-
 
 `include "build_id.v" 
 localparam CONF_STR = {
@@ -209,6 +209,7 @@ localparam CONF_STR = {
 	"h2h3h4-;",
 	"DIP;",
 	"-;",
+	"H5OR,Autosave Hiscores,Off,On;",
 	"P1,Pause options;",
 	"P1OP,Pause when OSD is open,On,Off;",
 	"P1OQ,Dim video after 10s,On,Off;",
@@ -240,6 +241,7 @@ wire        direct_video;
 
 wire        ioctl_download;
 wire        ioctl_upload;
+wire        ioctl_upload_req;
 wire        ioctl_wr;
 wire [24:0] ioctl_addr;
 wire  [7:0] ioctl_dout;
@@ -256,22 +258,21 @@ wire [15:0] joya = j2 ? joy2a : joy1a;
 
 wire [21:0] gamma_bus;
 
-hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
+hps_io #(.CONF_STR(CONF_STR)) hps_io
 (
 	.clk_sys(clk_sys),
 	.HPS_BUS(HPS_BUS),
-
-	.conf_str(CONF_STR),
-
+	
 	.buttons(buttons),
 	.status(status),
-	.status_menumask({mod == mod_robotron,mod == mod_stargate,mod == mod_splat,landscape,direct_video}),
+	.status_menumask({hs_configured,mod == mod_robotron,mod == mod_stargate,mod == mod_splat,landscape,direct_video}),
 	.forced_scandoubler(forced_scandoubler),
 	.gamma_bus(gamma_bus),
 	.direct_video(direct_video),
 
 	.ioctl_download(ioctl_download),
 	.ioctl_upload(ioctl_upload),
+	.ioctl_upload_req(ioctl_upload_req),
 	.ioctl_wr(ioctl_wr),
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_dout),
@@ -338,7 +339,7 @@ wire [7:0]		rgb_out;
 pause #(3,3,2,12) pause (
 	.*,
 	.user_button(m_pause),
-	.pause_request(1'b0),
+	.pause_request(hs_pause),
 	.options(~status[26:25])
 );
 
@@ -547,11 +548,11 @@ williams_ram ram
 	.DO(ram_do),
 
 	.dn_clock(clk_sys),
-	.dn_addr(ioctl_addr[15:0]),
+	.dn_addr(ioctl_download ? ioctl_addr[15:0] : hs_address),
 	.dn_data(ioctl_dout),
-	.dn_wr(ioctl_wr & (rom_download|ioctl_index=='d4) ),
-	.dn_din(ioctl_din),
-	.dn_nvram(ioctl_index=='d4)
+	.dn_wr(ioctl_wr & (rom_download|ioctl_index=='d4)),
+	.dn_din(hs_data_out),
+	.dn_nvram(ioctl_index == 8'd4)
 );
 
 ///////////////////////////////////////////////////////////////////
@@ -580,8 +581,8 @@ always @(posedge clk_sys) begin
 	if (pcnt[10:1] == 336) HBlank <= 1;
 	if (pcnt[10:1] == 040) HBlank <= 0;
 
-	if (lcnt == 256) VBlank <= 1;
-	if (lcnt == 013) VBlank <= 0;
+	if (lcnt == 254) VBlank <= 1;
+	if (lcnt == 14) VBlank <= 0;
 end
 
 wire rotate_ccw = 1;
@@ -604,5 +605,27 @@ assign audsum = {audio, 8'd0} + speech;
 assign AUDIO_L = {1'b0, audsum[16:3]};
 assign AUDIO_R = AUDIO_L;
 assign AUDIO_S = 0;
+
+
+// HISCORE SYSTEM
+// --------------
+wire [9:0] hs_address;
+wire [7:0] hs_data_out;
+wire hs_pause;
+wire hs_configured = ~(mod == mod_playball);
+
+nvram #(
+	.DUMPWIDTH(10),
+	.DUMPINDEX(4),
+	.PAUSEPAD(2)
+) hi (
+	.*,
+	.clk(clk_sys),
+	.paused(pause_cpu),
+	.autosave(status[27]),
+	.nvram_address(hs_address),
+	.nvram_data_out(hs_data_out),
+	.pause_cpu(hs_pause)
+);
 
 endmodule
