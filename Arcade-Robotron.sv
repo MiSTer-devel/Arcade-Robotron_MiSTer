@@ -181,8 +181,11 @@ assign USER_OUT = '1;
 assign {UART_RTS, UART_TXD, UART_DTR} = 0;
 assign {SD_SCK, SD_MOSI, SD_CS} = 'Z;
 assign {SDRAM_DQ, SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = 'Z;
+
+assign VGA_DISABLE = 0;
 assign VGA_F1    = 0;
 assign VGA_SCALER =0;
+
 assign AUDIO_MIX = 0;
 assign LED_USER  = ioctl_download;
 assign LED_DISK  = 0;
@@ -616,7 +619,7 @@ assign AUDIO_S = 0;
 wire [9:0] hs_address;
 wire [7:0] hs_data_out;
 wire hs_pause;
-wire hs_configured = ~(mod == mod_playball);
+wire hs_configured = (mod == mod_playball);
 
 nvram #(
 	.DUMPWIDTH(10),
