@@ -607,9 +607,117 @@ arcade_video #(296,8) arcade_video
 
 ///////////////////////////////////////////////////////////////////
 
-logic [16:0] audsum;
-assign audsum = {audio, 8'd0} + speech;
-assign AUDIO_L = {1'b0, audsum[16:3]};
+// Dual 2nd-order IIR filter replicating the Sinistar sound board's cascaded
+// active low-pass filters.
+// Stage 1: f0=3473Hz, Q=0.694, gain=4.186x (applied separately as <<< 2 at the end to avoid clipping)
+// Stage 2: f0=3330Hz, Q=0.699, gain=1.0x
+
+wire signed [15:0] s_in = speech - 16'h8000;
+wire signed [15:0] s1, s_out;
+
+// OP-AMP 1: 2nd-order LPF (f0=3473Hz, Q=0.694)
+iir_2nd_order #(
+    .COEFF_WIDTH(22),
+    .COEFF_SCALE(15),
+    .DATA_WIDTH(16),
+    .COUNT_BITS(12)
+) speech_lpf_stage1 (
+    .clk(clk_sys),
+    .reset(reset),
+    .div(12'd256),
+    .A2(-22'sd44251),
+    .A3(22'sd16754),
+    .B1(22'sd1318),
+    .B2(22'sd2636),
+    .B3(22'sd1318),
+    .in(s_in),
+    .out(s1)
+);
+
+// OP-AMP 2: 2nd-order LPF (f0=3330Hz, Q=0.699)
+iir_2nd_order #(
+    .COEFF_WIDTH(22),
+    .COEFF_SCALE(15),
+    .DATA_WIDTH(16),
+    .COUNT_BITS(12)
+) speech_lpf_stage2 (
+    .clk(clk_sys),
+    .reset(reset),
+    .div(12'd256),
+    .A2(-22'sd45163),
+    .A3(22'sd17301),
+    .B1(22'sd1226),
+    .B2(22'sd2453),
+    .B3(22'sd1226),
+    .in(s1),
+    .out(s_out)
+);
+
+// Gets close to the 4.18x gain of the original circuit
+wire signed [17:0] s_boosted = $signed(s_out) <<< 2;
+reg  signed [15:0] s_final;
+
+always @(*) begin
+    if (s_boosted > 32767)
+        s_final = 16'sh7FFF; // Saturate at positive limit
+    else if (s_boosted < -32768)
+        s_final = 16'sh8000; // Saturate at negative limit
+    else
+        s_final = s_boosted[15:0];
+end
+
+wire [15:0] filtered_speech_unsigned = s_final + 16'h8000;
+
+// Boxcar filter for the DAC. Makes the audio output more stable.
+reg [15:0] audio_accum;
+reg [7:0]  audio_filtered;
+reg [7:0]  accum_cnt;
+
+always @(posedge clk_sys) begin
+    if (reset) begin
+        accum_cnt <= 0;
+        audio_accum <= 0;
+        audio_filtered <= 0;
+    end else begin
+        accum_cnt <= accum_cnt + 1'd1;
+        
+        // On the 256th cycle, calculate the average and reset
+        if (accum_cnt == 8'd255) begin
+            // Divide the sum of 256 samples by 256 (shift right by 8)
+            audio_filtered <= (audio_accum + audio) >> 8;
+            audio_accum <= 0;
+        end else begin
+            // Accumulate the raw DAC steps
+            audio_accum <= audio_accum + audio;
+        end
+    end
+end
+
+wire [16:0] raw_mix = {audio_filtered, 8'd0} + (mod == mod_sinistar ? filtered_speech_unsigned : speech);
+
+// High pass filter - helps make the 'FUNNY "ELECTRIC SOUND"' sound more like it
+// does on a real machine without the harsh clipping
+wire signed [25:0] hpf_x0 = {1'b0, raw_mix, 8'd0}; 
+
+reg signed [25:0] hpf_x1;
+reg signed [25:0] hpf_y;
+
+always @(posedge clk_sys) begin
+    if (reset) begin
+        hpf_x1 <= 0;
+        hpf_y  <= 0;
+    end else if (accum_cnt == 8'd255) begin
+        hpf_x1 <= hpf_x0;
+        
+        // y[n] = x[n] - x[n-1] + y[n-1] - (y[n-1] >> 6)
+        hpf_y <= hpf_x0 - hpf_x1 + hpf_y - (hpf_y >>> 6);
+    end
+end
+
+wire signed [17:0] ac_mix = hpf_y[25:8];
+wire [17:0] final_mix_unsigned = ac_mix + 18'h10000;
+
+assign AUDIO_L = {1'b0, final_mix_unsigned[16:3]};
 assign AUDIO_R = AUDIO_L;
 assign AUDIO_S = 0;
 
