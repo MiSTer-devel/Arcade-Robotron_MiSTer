@@ -6,6 +6,7 @@ set_global_assignment -name VHDL_FILE rtl/pia6821.vhd
 set_global_assignment -name VHDL_FILE rtl/dpram.vhd
 set_global_assignment -name VHDL_FILE rtl/gen_ram.vhd
 set_global_assignment -name VHDL_FILE rtl/williams_ram.vhd
+set_global_assignment -name VHDL_FILE rtl/hc55564.vhd
 set_global_assignment -name VHDL_FILE rtl/williams_sound_board.vhd
 set_global_assignment -name VHDL_FILE rtl/williams_cpu.vhd
 set_global_assignment -name VHDL_FILE rtl/williams_soc.vhd
