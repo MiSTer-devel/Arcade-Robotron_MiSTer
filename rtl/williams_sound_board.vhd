@@ -202,13 +202,8 @@ port map(
 end struct;
 
 -- HC55516 Continuously Variable Slope Delta decoder
--- Rewritten to match MAME's reverse-engineered digital model
+-- Written to match MAME's reverse-engineered digital model
 -- (based on work by Aaron Giles, Jonathan Gevaryahu, Zonn Moore)
---
--- The real HC55516 is a fully digital chip internally with a 10-bit DAC,
--- 12-bit syllabic digital filter, and dual-edge processing. The previous
--- implementation used a simplified analog model that produced incorrect
--- frequency response (scratchiness and tinny tail artifacts).
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -270,7 +265,7 @@ begin
       v_intfilter := intfilter;
 
       -- Determine frozen state: integrator near rail and bit would push further
-      -- bit=0 pushes positive, bit=1 pushes negative (per MAME convention)
+      -- bit=0 pushes positive, bit=1 pushes negative
       v_frozen := (v_intfilter >= to_signed(16#180#, 10) and v_bit = '0') or
                   (v_intfilter <= to_signed(-16#180#, 10) and v_bit = '1');
 
