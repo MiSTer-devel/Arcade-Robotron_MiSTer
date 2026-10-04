@@ -8,6 +8,8 @@ The testbenches use VHDL-2008 and ModelSim Intel FPGA Edition. Put `vlib`, `vmap
 
 Python 3.9 or later prepares the ROM packets directly from the three MRAs and checks their sizes and MD5 values. Supply `blaster.zip`, `blasterkit.zip`, and `blastero.zip`. ROMs and simulation output stay outside the checkout. Use `-OutputDirectory` to choose the output folder.
 
+The dedicated 20-level set uses `releases/Blaster.mra`. The conversion kit and 30-level MRAs are in `releases/_alternatives`. ROM preparation searches both locations.
+
 The short tests check ROM banking and download isolation, SC2 remapping and nibble masks, clip boundaries, mono/stereo audio, clock rates, and the sound CPU's RAM and PIA wiring. With ROMs present, the board test also checks the memory map, CMOS, input multiplexing, all 128 real blitter remap tables, scanline background colors, and erase behind. It places different colors at both visible edges and guard pixels outside them, checking that Blaster blanks the guards and legacy modes retain them. The sound ROM test boots the original sound CPU program and checks that three commands produce DAC samples.
 
 The ROM test checks every byte of the twelve populated Blaster banks, both fixed-ROM windows, and the four empty banks in both Blaster modes. It also reloads and checks the complete program-ROM address range and aliases for each legacy mode. Legacy program ROMs share storage with Blaster's banked ROMs; selecting another game requires downloading its ROM packet, as on MiSTer. Empty Blaster banks return zero without allocating RAM. Downloads do not depend on the game selection arriving first.

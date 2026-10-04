@@ -12,7 +12,10 @@ def prepare(roms, output):
         raise ValueError("Keep ROM images outside the checkout")
     output.mkdir(parents=True, exist_ok=True)
     for name in ("Blaster (Conversion Kit)", "Blaster", "Blaster (30 Levels)"):
-        document = ET.parse(repo / "releases" / (name + ".mra"))
+        descriptions = list((repo / "releases").rglob(name + ".mra"))
+        if len(descriptions) != 1:
+            raise ValueError(f"Expected one MRA for {name}, found {len(descriptions)}")
+        document = ET.parse(descriptions[0])
         packet = document.find("rom[@index='0']")
         archives = []
         try:
