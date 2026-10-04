@@ -48,6 +48,13 @@ port (
 
 	blitter_sc2      : in    std_logic;
 	sinistar         : in    std_logic;
+	game             : in    std_logic_vector(7 downto 0);
+	ROM_BANK         : out   std_logic_vector(3 downto 0);
+	JOY_X            : in    std_logic_vector(3 downto 0);
+	JOY_Y            : in    std_logic_vector(3 downto 0);
+	DIGITAL_X        : in    std_logic_vector(3 downto 0);
+	DIGITAL_Y        : in    std_logic_vector(3 downto 0);
+	BLASTER_BTN      : in    std_logic_vector(3 downto 0);
 	sg_state         : out   std_logic;
 
 	-- Switches
@@ -67,6 +74,7 @@ port (
 
 	-- Audio
 	audio_out        : out   std_logic_vector(7 downto 0);
+	audio_out_r      : out   std_logic_vector(7 downto 0);
 	speech_out       : out   std_logic_vector(15 downto 0);
 
 	-- 12-pin connectors
@@ -76,7 +84,7 @@ port (
 	pause            : in    std_logic;
 	
 	dl_clock         : in    std_logic;
-	dl_addr          : in    std_logic_vector(16 downto 0);
+	dl_addr          : in    std_logic_vector(24 downto 0);
 	dl_data          : in    std_logic_vector(7 downto 0);
 	dl_wr            : in    std_logic;
 	dl_upload        : in    std_logic
@@ -126,7 +134,18 @@ signal  cpu_e        : std_logic;
 signal  cpu_q        : std_logic;
 
 signal  hand         : std_logic;
-signal  select_sound : std_logic_vector( 5 downto 0);
+signal  select_sound : std_logic_vector( 7 downto 0);
+signal  blaster      : std_logic;
+signal  blaster_stereo : std_logic;
+signal  cpu_btn      : std_logic_vector(3 downto 0);
+signal  cpu_ja       : std_logic_vector(7 downto 0);
+signal  joystick_x   : std_logic_vector(3 downto 0);
+signal  joystick_y   : std_logic_vector(3 downto 0);
+signal  sound_hand   : std_logic;
+signal  cpu_sc2      : std_logic;
+signal  sound_select : std_logic;
+signal  snd_addr_r   : std_logic_vector(13 downto 0);
+signal  snd_do_r     : std_logic_vector(7 downto 0);
 
 signal  snd_addr     : std_logic_vector(13 downto 0);
 signal  snd_do       : std_logic_vector( 7 downto 0);
@@ -135,6 +154,16 @@ signal  snd_rom_we   : std_logic;
 signal  spch_rom_we  : std_logic;
 
 begin
+
+blaster <= '1' when game = x"08" or game = x"09" else '0';
+blaster_stereo <= '1' when game = x"09" else '0';
+joystick_x <= DIGITAL_X when JOY_X = x"7" else JOY_X;
+joystick_y <= DIGITAL_Y when JOY_Y = x"7" else JOY_Y;
+cpu_btn <= BLASTER_BTN(3 downto 1) & BTN(0) when blaster = '1' else BTN;
+cpu_ja <= not (joystick_x & joystick_y) when blaster = '1' else JA;
+sound_hand <= '1' when blaster = '1' else hand;
+cpu_sc2 <= '1' when blaster = '1' else blitter_sc2;
+sound_select <= select_sound(6) when blaster_stereo = '1' else '1';
 
 mc6809: mc6809is
 port map (
@@ -173,8 +202,12 @@ end process;
 cpu_board: entity work.williams_cpu
 port map (
 	clock            => clock,
-	blitter_sc2      => blitter_sc2,
+	blitter_sc2      => cpu_sc2,
 	sinistar         => sinistar,
+	blaster          => blaster,
+	blaster_stereo   => blaster_stereo,
+	BLASTER_FIRE     => not BLASTER_BTN(0),
+	ROM_BANK         => ROM_BANK,
 
 	A                => cpu_a,
 	Dout             => cpu_dout,
@@ -217,7 +250,7 @@ port map (
 	SW               => SW,
 
 	-- Buttons
-	BTN              => BTN,
+	BTN              => cpu_btn,
 	SIN_FIRE         => SIN_FIRE,
 	SIN_BOMB         => SIN_BOMB,
 
@@ -229,7 +262,7 @@ port map (
 	Vsync            => Vsync,
 
 	-- 12-pin connectors
-	JA               => JA,
+	JA               => cpu_ja,
 	JB               => JB,
 	
 	-- Sound board
@@ -266,21 +299,50 @@ port map(
 	d_b    => dl_data
 );
 
-snd_rom_we  <= '1' when dl_wr = '1' and dl_addr(16 downto 12)  = x"C" else '0'; -- 0C000-0CFFF
-spch_rom_we <= '1' when dl_wr = '1' and dl_addr(16 downto 12) >= x"E" else '0'; -- 0E000-11FFF
+snd_rom_we  <= '1' when dl_wr = '1' and dl_addr(24 downto 12) = 12 else '0'; -- 0C000-0CFFF
+spch_rom_we <= '1' when dl_wr = '1' and dl_addr(24 downto 12) >= 14 and dl_addr(24 downto 12) <= 17 else '0'; -- 0E000-11FFF
 
 -- sound board
 sound_board : entity work.williams_sound_board
 port map(
 	clock         => clock,
 	reset         => not cpu_reset_n,
-	hand          => hand,
-	select_sound  => select_sound,
+	hand          => sound_hand,
+	select_sound  => select_sound(5 downto 0),
+	select_board  => sound_select,
+	blaster       => blaster,
 	audio_out     => audio_out,
 	speech_out    => speech_out,
 	rom_addr      => snd_addr,
 	rom_do        => snd_do,
 	spch_do		  => spch_do
+);
+
+snd_rom_r : entity work.dpram
+generic map( dWidth => 8, aWidth => 12)
+port map(
+	clk_a  => clock,
+	addr_a => snd_addr_r(11 downto 0),
+	q_a    => snd_do_r,
+	clk_b  => dl_clock,
+	we_b   => snd_rom_we,
+	addr_b => dl_addr(11 downto 0),
+	d_b    => dl_data
+);
+
+sound_board_r : entity work.williams_sound_board
+port map(
+	clock         => clock,
+	reset         => not cpu_reset_n or not blaster_stereo,
+	hand          => '1',
+	select_sound  => select_sound(5 downto 0),
+	select_board  => select_sound(7),
+	blaster       => '1',
+	audio_out     => audio_out_r,
+	speech_out    => open,
+	rom_addr      => snd_addr_r,
+	rom_do        => snd_do_r,
+	spch_do       => x"55"
 );
 
 end Behavioral;

@@ -477,6 +477,7 @@ wire  [1:0] b;
 wire        vs,hs;
 
 wire  [7:0] audio;
+wire  [7:0] audio_r;
 wire [15:0] speech;
 
 wire [15:0] mem_addr;
@@ -488,6 +489,7 @@ wire        ramlb;
 wire        ramub;
 
 wire        sg_state;
+wire  [3:0] rom_bank;
 
 williams_soc soc
 (
@@ -498,10 +500,18 @@ williams_soc soc
 	.Hsync       ( hs          ),
 	.Vsync       ( vs          ),
 	.audio_out   ( audio       ),
+	.audio_out_r ( audio_r     ),
 	.speech_out  ( speech      ),
 
 	.blitter_sc2 ( blitter_sc2 ),
 	.sinistar    ( sinistar    ),
+	.game        ( mod         ),
+	.ROM_BANK    ( rom_bank    ),
+	.JOY_X       ( amx         ),
+	.JOY_Y       ( amy         ),
+	.DIGITAL_X   ( dmx         ),
+	.DIGITAL_Y   ( dmy         ),
+	.BLASTER_BTN ( {m_start1,m_start2,m_coin1,m_fire_c} ),
 	.sg_state    ( sg_state    ),
 
 	.BTN         ( {BTN[2:0],reset} ),
@@ -522,23 +532,24 @@ williams_soc soc
 	.pause       ( pause_cpu   ),
 
 	.dl_clock    ( clk_sys     ),
-	.dl_addr     ( ioctl_addr[16:0] ),
+	.dl_addr     ( ioctl_addr ),
 	.dl_data     ( ioctl_dout  ),
 	.dl_wr       ( ioctl_wr & rom_download ),
 	.dl_upload   ( ioctl_upload )
 );
 
 wire [7:0] rom_do;
-dpram #(.dWidth(8),.aWidth(17)) cpu_prog_rom
+williams_rom cpu_prog_rom
 (
-	.clk_a(~clk_sys),
-	.addr_a({1'b0,mem_addr[15], ~mem_addr[15] & mem_addr[14], mem_addr[13:0]}),
-	.q_a(rom_do),
-
-	.clk_b(clk_sys),
-	.addr_b(ioctl_addr[16:0]),
-	.d_b(ioctl_dout),
-	.we_b(ioctl_wr & rom_download)
+	.clock(clk_sys),
+	.game(mod),
+	.address(mem_addr),
+	.bank(rom_bank),
+	.data(rom_do),
+	.dl_clock(clk_sys),
+	.dl_addr(ioctl_addr),
+	.dl_data(ioctl_dout),
+	.dl_wr(ioctl_wr & rom_download)
 );
 
 wire [7:0] ram_do;
@@ -551,9 +562,10 @@ williams_ram ram
 	.ADDR(mem_addr),
 	.DI(mem_di),
 	.DO(ram_do),
+	.game(mod),
 
 	.dn_clock(clk_sys),
-	.dn_addr(ioctl_download ? ioctl_addr[15:0] : hs_address),
+	.dn_addr(ioctl_download ? ioctl_addr : {15'd0,hs_address}),
 	.dn_data(ioctl_dout),
 	.dn_wr(ioctl_wr & (rom_download|ioctl_index=='d4)),
 	.dn_din(hs_data_out),
@@ -717,8 +729,18 @@ end
 wire signed [17:0] ac_mix = hpf_y[25:8];
 wire [17:0] final_mix_unsigned = ac_mix + 18'h10000;
 
-assign AUDIO_L = {1'b0, final_mix_unsigned[16:3]};
-assign AUDIO_R = AUDIO_L;
+wire [15:0] mono_audio = {1'b0, final_mix_unsigned[16:3]};
+williams_audio audio_output
+(
+	.clock(clk_sys),
+	.reset(reset),
+	.game(mod),
+	.mono(mono_audio),
+	.dac_l(audio),
+	.dac_r(audio_r),
+	.audio_l(AUDIO_L),
+	.audio_r(AUDIO_R)
+);
 assign AUDIO_S = 0;
 
 

@@ -18,6 +18,8 @@ A simulation model of the Williams Electronics Robotron: 2084 arcade hardware. C
 * Splat!
 * Sinistar
 * PlayBall!
+* Blaster (Conversion Kit)
+* Blaster (20 and 30 levels)
 
 ## ROM Files Instructions
 
@@ -36,6 +38,8 @@ Quick reference for folders and file placement:
 /_Arcade/mame/<mame rom>.zip  
 /_Arcade/hbmame/<hbmame rom>.zip  
 ```
+
+Blaster support is experimental. The conversion kit uses mono sound; the dedicated sets use stereo. Both support analog or digital joystick controls. Fresh CMOS displays "HIGH SCORE TABLE RESET / FACTORY SETTINGS RESTORED"; press Advance to continue. Simulation instructions are in [tests/README.md](tests/README.md).
 
 ## Copyright and Licenses
 

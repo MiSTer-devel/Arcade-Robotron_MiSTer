@@ -37,6 +37,12 @@ port(
 	blt_slow        :	out   boolean;
 	sc2             : in    std_logic;
 	clip            : in    std_logic_vector(15 downto 0) := x"C000";
+	remap           : in    std_logic := '0';
+	remap_sel       : in    std_logic_vector(6 downto 0) := (others => '0');
+	dl_clock        : in    std_logic := '0';
+	dl_addr         : in    std_logic_vector(10 downto 0) := (others => '0');
+	dl_data         : in    std_logic_vector(3 downto 0) := (others => '0');
+	dl_wr           : in    std_logic := '0';
 
 	reg_cs          : in    std_logic;
 	reg_data_in     : in    std_logic_vector( 7 downto 0);
@@ -93,6 +99,10 @@ architecture RTL of sc1 is
 
 	signal blt_src_data     : std_logic_vector( 7 downto 0) := (others => '0');
 	signal blt_shift        : std_logic_vector( 3 downto 0) := (others => '0');
+	signal blt_raw_data     : std_logic_vector( 7 downto 0);
+	signal blt_pixels       : std_logic_vector( 7 downto 0);
+	signal remap_data       : std_logic_vector( 7 downto 0);
+	signal remap_byte       : std_logic_vector( 7 downto 0);
 
 	signal src_address      : std_logic_vector(15 downto 0) := (others => '0');
 	signal dst_address      : std_logic_vector(15 downto 0) := (others => '0');
@@ -105,6 +115,33 @@ architecture RTL of sc1 is
 	signal xorval           : std_logic_vector( 7 downto 0) := (others => '0');
 
 begin
+	remap_data <= blt_data_in when state = state_src else blt_raw_data;
+	blt_pixels <= blt_src_data when remap = '0' else
+	              remap_byte when ctrl_shift = '0' else blt_shift & remap_byte(7 downto 4);
+
+	remap_upper : entity work.dpram
+	generic map( dWidth => 4, aWidth => 11)
+	port map(
+		clk_a  => dl_clock,
+		we_a   => dl_wr,
+		addr_a => dl_addr,
+		d_a    => dl_data,
+		clk_b  => clk,
+		addr_b => remap_sel & remap_data(7 downto 4),
+		q_b    => remap_byte(7 downto 4)
+	);
+
+	remap_lower : entity work.dpram
+	generic map( dWidth => 4, aWidth => 11)
+	port map(
+		clk_a  => dl_clock,
+		we_a   => dl_wr,
+		addr_a => dl_addr,
+		d_a    => dl_data,
+		clk_b  => clk,
+		addr_b => remap_sel & remap_data(3 downto 0),
+		q_b    => remap_byte(3 downto 0)
+	);
 	-- SC1 had a bug so values had to be xored with 0X04, SC2 fixed the bug so no xor required
 	xorval <= x"04" when sc2='0' else x"00";
 
@@ -114,10 +151,12 @@ begin
 
 	blt_address_out <= dst_address when (state = state_dst) else src_address;
 
-	en_upper        <= (state = state_src) or (not (ctrl_no_upper = '1' or (ctrl_foreground = '1' and blt_src_data(7 downto 4) = x"0") ));
-	en_lower        <= (state = state_src) or (not (ctrl_no_lower = '1' or (ctrl_foreground = '1' and blt_src_data(3 downto 0) = x"0") ));
+	en_upper        <= (state = state_src) or ((ctrl_no_upper = '0') xor (ctrl_foreground = '1' and blt_pixels(7 downto 4) = x"0")) when remap = '1' else
+	                   (state = state_src) or (not (ctrl_no_upper = '1' or (ctrl_foreground = '1' and blt_pixels(7 downto 4) = x"0") ));
+	en_lower        <= (state = state_src) or ((ctrl_no_lower = '0') xor (ctrl_foreground = '1' and blt_pixels(3 downto 0) = x"0")) when remap = '1' else
+	                   (state = state_src) or (not (ctrl_no_lower = '1' or (ctrl_foreground = '1' and blt_pixels(3 downto 0) = x"0") ));
 
-	blt_data_out    <= reg_solid when ctrl_solid = '1' else blt_src_data;
+	blt_data_out    <= reg_solid when ctrl_solid = '1' else blt_pixels;
 
 	x_count_next    <= x_count + 1;
 	y_count_next    <= y_count + 1;
@@ -190,12 +229,15 @@ begin
 
 				when state_src =>
 					if blt_ack = '1' then
+						blt_raw_data <= blt_data_in;
 						if ctrl_shift = '0' then
 							-- unshifted
 							blt_src_data <= blt_data_in;
 						else
 							-- shifted right one pixel
-							blt_shift    <= blt_data_in( 3 downto 0);
+							if remap = '0' then
+								blt_shift <= blt_data_in(3 downto 0);
+							end if;
 							blt_src_data <= blt_shift & blt_data_in( 7 downto 4);
 						end if;
 						state <= state_dst;
@@ -203,6 +245,9 @@ begin
 
 				when state_dst =>
 					if blt_ack = '1' then
+						if remap = '1' then
+							blt_shift <= remap_byte(3 downto 0);
+						end if;
 						state <= state_src;
 
 						if x_count_next < reg_width then

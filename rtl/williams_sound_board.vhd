@@ -32,6 +32,8 @@ port(
 	reset        : in  std_logic;
 	hand         : in  std_logic;
 	select_sound : in  std_logic_vector( 5 downto 0);
+	select_board : in  std_logic := '1';
+	blaster      : in  std_logic := '0';
 	audio_out    : out std_logic_vector( 7 downto 0);
 	speech_out   : out std_logic_vector(15 downto 0);
 	rom_addr     : out std_logic_vector(13 downto 0);
@@ -42,6 +44,10 @@ port(
 end williams_sound_board;
 
 architecture struct of williams_sound_board is
+
+ signal sound_in_clk : integer;
+ signal sound_out_clk : integer;
+ signal wram_addr : std_logic_vector(7 downto 0);
 
  signal cpu_addr   : std_logic_vector(15 downto 0);
  signal cpu_di     : std_logic_vector( 7 downto 0);
@@ -87,12 +93,17 @@ architecture struct of williams_sound_board is
 
 begin
 
-clk089 : work.CEGen
+sound_in_clk <= 48000000 when blaster = '1' else 1200;
+sound_out_clk <= 3579545 when blaster = '1' else 89;
+wram_addr <= cpu_addr(7 downto 0) when blaster = '1' else '0' & cpu_addr(6 downto 0);
+
+clk089 : entity work.CEGen
 port map
 (
 	CLK     => clock,
-	IN_CLK  => 1200,
-	OUT_CLK => 89,
+	RST_N   => not reset,
+	IN_CLK  => sound_in_clk,
+	OUT_CLK => sound_out_clk,
 	CE      => ce_089
 );
 
@@ -118,12 +129,12 @@ cpu_di <=
 audio_out <= pia_pa_o;
 
 pia_pb_i(5 downto 0) <= select_sound(5 downto 0);
-pia_pb_i(6) <= '1';
+pia_pb_i(6) <= select_board;
 pia_pb_i(7) <= hand; -- Handshake from rom board rom_pia_pa_out(7)
 
 
 -- pia Cb1
-pia_cb1_i <= '0' when select_sound = "111111" and hand = '1' else '1';
+pia_cb1_i <= '0' when select_sound = "111111" and hand = '1' and select_board = '1' else '1';
 
 -- pia irqs to cpu
 cpu_irq  <= pia_irqa or pia_irqb;
@@ -151,11 +162,11 @@ rom_addr  <= (cpu_addr(13 downto 12) - "11") & cpu_addr(11 downto 0);
 
 -- cpu wram 
 cpu_ram : entity work.gen_ram
-generic map( dWidth => 8, aWidth => 7)
+generic map( dWidth => 8, aWidth => 8)
 port map(
 	clk  => clock,
 	we   => wram_we,
-	addr => cpu_addr(6 downto 0),
+	addr => wram_addr,
 	d    => cpu_do,
 	q    => wram_do
 );
