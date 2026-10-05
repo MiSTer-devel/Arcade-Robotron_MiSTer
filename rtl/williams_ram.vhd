@@ -14,9 +14,10 @@ port (
 	ADDR     : in  std_logic_vector(15 downto 0);
 	DI       : in  std_logic_vector( 7 downto 0);
 	DO       : out std_logic_vector( 7 downto 0);
+	game     : in  std_logic_vector(7 downto 0);
 
 	dn_clock : in  std_logic;
-	dn_addr	: in  std_logic_vector(15 downto 0);
+	dn_addr	: in  std_logic_vector(24 downto 0);
 	dn_data	: in  std_logic_vector(7 downto 0);
 	dn_wr	   : in  std_logic;
    dn_din   : out  std_logic_vector(7 downto 0);
@@ -56,7 +57,7 @@ begin
 	ram_data(3 downto 0) <= ram_out(3 downto 0) when ENL = '1' else "0000";
 	
 	cmos_cs  <= '1' when ADDR(15 downto 10) = "110011" else '0';
-	dl_cs <= '1' when (dn_addr(15 downto 10) = "110100") or (dn_nvram='1') else '0';
+	dl_cs <= '1' when (dn_addr(24 downto 10) = 52) or (dn_nvram='1') else '0';
 	
 	
 	
@@ -78,6 +79,7 @@ begin
 		q_b     => cmos_out
 	);
 
-	DO  <= cmos_out when cmos_cs = '1' else ram_data;
+	DO  <= cmos_out or x"F0" when cmos_cs = '1' and (game = x"08" or game = x"09") else
+	       cmos_out when cmos_cs = '1' else ram_data;
 
-end RTL;	
+end RTL;

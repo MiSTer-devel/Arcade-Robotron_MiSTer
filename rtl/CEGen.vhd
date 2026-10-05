@@ -17,7 +17,7 @@ END CEGen;
 ARCHITECTURE SYN OF CEGen IS
 BEGIN
 	process( RST_N, CLK )
-	variable CLK_SUM : integer;
+	variable CLK_SUM : integer := 0;
 	begin
 		if RST_N = '0' then
 			CLK_SUM := 0;

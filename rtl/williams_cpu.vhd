@@ -36,6 +36,10 @@ entity williams_cpu is
 		clock            : in    std_logic;
 		blitter_sc2      : in    std_logic;
 		sinistar         : in    std_logic;
+		blaster          : in    std_logic := '0';
+		blaster_stereo   : in    std_logic := '0';
+		BLASTER_FIRE     : in    std_logic := '1';
+		ROM_BANK         : out   std_logic_vector(3 downto 0);
 
 		-- MC6809 signals
 		A                : in    std_logic_vector(15 downto 0);
@@ -97,10 +101,10 @@ entity williams_cpu is
 
 		-- To sound board
 		HAND             : out    std_logic;
-		PB               : out   std_logic_vector(5 downto 0);
+		PB               : out   std_logic_vector(7 downto 0);
 		
 		dl_clock         : in    std_logic;
-		dl_addr          : in    std_logic_vector(16 downto 0);
+		dl_addr          : in    std_logic_vector(24 downto 0);
 		dl_data          : in    std_logic_vector(7 downto 0);
 		dl_wr            : in    std_logic
 	);
@@ -193,6 +197,11 @@ architecture Behavioral of williams_cpu is
     
     signal e_rom                    : std_logic := '0';
     signal screen_control           : std_logic := '0';
+    signal rom_bank_select          : std_logic_vector(3 downto 0) := (others => '0');
+    signal remap_select             : std_logic_vector(6 downto 0) := (others => '0');
+    signal video_control            : std_logic_vector(1 downto 0) := (others => '0');
+    signal blt_clip                 : std_logic_vector(15 downto 0);
+    signal remap_we                 : std_logic;
     
     signal rom_access               : boolean;
     signal ram_access               : boolean;
@@ -326,6 +335,15 @@ architecture Behavioral of williams_cpu is
     signal pixel_nibbles : std_logic_vector(7 downto 0);
     signal pixel_byte_l : std_logic_vector(7 downto 0);
     signal pixel_byte_h : std_logic_vector(7 downto 0);
+    signal video_visible : boolean;
+    signal pixel_visible : boolean := false;
+    signal pixel_blank : boolean := true;
+    signal background_color : std_logic_vector(7 downto 0) := (others => '0');
+    signal background_default : std_logic_vector(7 downto 0) := (others => '0');
+    signal scanline_color : std_logic_vector(7 downto 0) := (others => '0');
+    signal erase_behind : boolean := false;
+    signal video_erase_enable : boolean := false;
+    signal video_erase_address : std_logic_vector(15 downto 0);
     
     -------------------------------------------------------------------
 
@@ -414,13 +432,13 @@ begin
     rom_pia_access <= std_match(address, "11001000----11--");
 
     -- Control address: write: C9XX
-    control_access <= std_match(address, "11001001--------");
+    control_access <= std_match(address, "11001001--------") and (blaster = '0' or address(7 downto 6) = "00");
 
     -- Special chips: read/write? CAXX
     blt_register_access <= std_match(address, "11001010--------");
 
     -- Video counter: read: CBXX (even addresses)
-    video_counter_access <= std_match(address, "11001011-------0");
+    video_counter_access <= std_match(address, "11001011--------") and (blaster = '1' or address(0) = '0');
 
     -- Watchdog register: write: CBFE or CBFF
     --watchdog_access <= std_match(address, "110010111111111-");
@@ -459,6 +477,11 @@ begin
 
     decoder_4_in <= screen_control & address(15 downto 8);
     decoder_6_in <= screen_control & std_logic_vector(video_address(13 downto 6));
+
+    video_visible <= unsigned(video_prom_address) >= 7 and unsigned(video_prom_address) <= 246 and
+        ((clock_12_phase(1) = '1' and video_address(5 downto 0) >= 3 and video_address(5 downto 0) <= 51) or
+         (clock_12_phase(5) = '1' and video_address(5 downto 0) >= 3 and video_address(5 downto 0) <= 50) or
+         (clock_12_phase(9) = '1' and video_address(5 downto 0) >= 2 and video_address(5 downto 0) <= 50));
 
     process(clock)
     begin
@@ -513,7 +536,7 @@ begin
                 ram_lower_enable <= true;
                 ram_upper_enable <= true;
 
-                if video_blank then
+                if video_blank or (blaster = '1' and pixel_blank) then
                     vgaRed <= (others => '0');
                     vgaGreen <= (others => '0');
                     vgaBlue <= (others => '0');
@@ -528,6 +551,29 @@ begin
                clock_12_phase( 5) = '1' or
                clock_12_phase( 9) = '1' then
                 pixel_nibbles <= memory_data_in;
+                pixel_visible <= video_visible;
+
+                if blaster = '1' then
+                    video_erase_address <= memory_address;
+                    video_erase_enable <= erase_behind and video_visible;
+
+                    if video_address(5 downto 0) = 0 then
+                        if clock_12_phase(1) = '1' then
+                            scanline_color <= not memory_data_in;
+                            if unsigned(video_prom_address) = 0 then
+                                background_default <= not memory_data_in;
+                            end if;
+                            if unsigned(video_prom_address) = 7 or video_control(0) = '0' then
+                                background_color <= background_default;
+                            end if;
+                        elsif clock_12_phase(5) = '1' then
+                            erase_behind <= video_control(1) = '1' and memory_data_in(1) = '1';
+                            if video_control(0) = '1' and memory_data_in(0) = '1' then
+                                background_color <= scanline_color;
+                            end if;
+                        end if;
+                    end if;
+                end if;
 			end if;
             if clock_12_phase( 2) = '1' or
                clock_12_phase( 6) = '1' or
@@ -535,8 +581,26 @@ begin
 
                 pixel_byte_l <= color_table(to_integer(unsigned(pixel_nibbles(3 downto 0))));
                 pixel_byte_h <= color_table(to_integer(unsigned(pixel_nibbles(7 downto 4))));
+                pixel_blank <= not pixel_visible;
 
-                if video_blank then
+                if blaster = '1' then
+                    if pixel_nibbles(3 downto 0) = x"0" then
+                        pixel_byte_l <= background_color or color_table(0);
+                    end if;
+                    if pixel_nibbles(7 downto 4) = x"0" then
+                        pixel_byte_h <= background_color or color_table(0);
+                    end if;
+                    -- Clear the captured byte before the next memory slot.
+                    if video_erase_enable and not (memory_write and ram_enable and memory_address = video_erase_address) then
+                        memory_address <= video_erase_address;
+                        memory_write <= true;
+                        ram_enable <= true;
+                        ram_lower_enable <= true;
+                        ram_upper_enable <= true;
+                    end if;
+                end if;
+
+                if video_blank or (blaster = '1' and pixel_blank) then
                     vgaRed <= (others => '0');
                     vgaGreen <= (others => '0');
                     vgaBlue <= (others => '0');
@@ -606,6 +670,9 @@ begin
 
                     if (ram_access or cmos_access or color_table_access) and write then
                         memory_data_out <= mpu_data_in;
+                        if blaster = '1' and cmos_access then
+                            memory_data_out <= mpu_data_in or x"F0";
+                        end if;
                         memory_write <= true;
                     else
                         --memory_output_enable <= true;
@@ -656,6 +723,15 @@ begin
                         e_rom <= mpu_data_in(0);
                     end if;
 
+                    if blaster = '1' and std_match(address, "11001001--------") and write then
+                        case address(7 downto 6) is
+                            when "01" => remap_select <= mpu_data_in(6 downto 0);
+                            when "10" => rom_bank_select <= mpu_data_in(3 downto 0);
+                            when "11" => video_control <= mpu_data_in(1 downto 0);
+                            when others => null;
+                        end case;
+                    end if;
+
                     if color_table_access and write then
                         color_table(to_integer(unsigned(address(3 downto 0)))) <= mpu_data_in;
                     end if;
@@ -683,6 +759,19 @@ begin
                     end if;
                 end if;
             end if;
+            if reset = '1' and blaster = '1' then
+                rom_bank_select <= (others => '0');
+                remap_select <= (others => '0');
+                video_control <= (others => '0');
+                e_rom <= '0';
+                screen_control <= '0';
+                blt_win_en <= '0';
+                background_color <= (others => '0');
+                background_default <= (others => '0');
+                scanline_color <= (others => '0');
+                erase_behind <= false;
+                video_erase_enable <= false;
+            end if;
         end if;
     end process;
 
@@ -698,11 +787,11 @@ begin
     --led_bcd_in <= debug_blt_source_address;
 
     -------------------------------------------------------------------
-	 romd4_cs <= '1' when dl_addr(16 downto 9) = "01101010" else '0';
-	 romd6_cs <= '1' when dl_addr(16 downto 9) = "01101011" else '0';
+	 romd4_cs <= '1' when unsigned(dl_addr(24 downto 9)) = 16#6A# else '0';
+	 romd6_cs <= '1' when unsigned(dl_addr(24 downto 9)) = 16#6B# else '0';
  
 	 -- cpu to video addr decoder
-	 cpu_video_addr_decoder : work.dpram generic map (aWidth => 9, dWidth => 8)
+	 cpu_video_addr_decoder : entity work.dpram generic map (aWidth => 9, dWidth => 8)
 	 port map
 	 (
 	 	clk_a  => dl_clock,
@@ -716,7 +805,7 @@ begin
 	 );
 
 	 -- video scan addr decoder
-	 video_scan_addr_decoder : work.dpram generic map (aWidth => 9, dWidth => 8)
+	 video_scan_addr_decoder : entity work.dpram generic map (aWidth => 9, dWidth => 8)
 	 port map
 	 (
 	 	clk_a  => dl_clock,
@@ -733,14 +822,23 @@ begin
 
     blt_halt_ack <= mpu_halted;
     blt_data_in <= memory_data_in;
+    ROM_BANK <= rom_bank_select;
+    blt_clip <= x"9700" when blaster = '1' else x"7400";
+    remap_we <= dl_wr when unsigned(dl_addr(24 downto 11)) = 16#24# else '0';
 
     blt: entity work.sc1
         port map(
             clk => clock,
 				blt_slow => blt_slow,
 				sc2 => blitter_sc2,
-				clip => x"7400",
-				win_en => blt_win_en and sinistar,
+				clip => blt_clip,
+				win_en => blt_win_en and (sinistar or blaster),
+				remap => blaster,
+				remap_sel => remap_select,
+				dl_clock => dl_clock,
+				dl_addr => dl_addr(10 downto 0),
+				dl_data => dl_data(3 downto 0),
+				dl_wr => remap_we,
 
             reg_cs => blt_reg_cs,
             reg_data_in => blt_reg_data_in,
@@ -772,7 +870,7 @@ begin
                      not R_COIN &
                      not ADVANCE &
                      not AUTO_UP;
-    PB(5 downto 0) <= (rom_pia_pb_out(5 downto 0) or (not rom_pia_pb_dir(5 downto 0)));
+    PB <= rom_pia_pb_out or (not rom_pia_pb_dir);
     HAND <= (rom_pia_pa_out(7) or (not rom_pia_pa_dir(7)));
 
     --rom_led_digit(0) <= rom_pia_pb_out(6);
@@ -825,7 +923,10 @@ begin
 
     widget_ic4_y <= widget_ic4_b when widget_pia_input_select = '1' else widget_ic4_a;
     
-    widget_pia_pa_in <= widget_ic4_y(2) &
+    widget_pia_pa_in <= not JA when blaster = '1' and widget_pia_input_select /= blaster_stereo else
+                        "0000" & not PLAYER_2_START & not PLAYER_1_START & not BLASTER_FIRE & not SIN_FIRE when blaster = '1' and blaster_stereo = '0' else
+                        x"00" when blaster = '1' else
+                        widget_ic4_y(2) &
                         widget_ic4_y(1) &
                         not PLAYER_2_START &
                         not PLAYER_1_START &
@@ -841,7 +942,11 @@ begin
                         widget_ic3_y(3) &
                         widget_ic3_y(2) &
                         widget_ic3_y(1);
-    widget_pia_pb_in <= not board_interface_w1 &
+    widget_pia_pb_in <= "0000000" & not SIN_BOMB when blaster = '1' and blaster_stereo = '0' else
+                        "00" & not PLAYER_2_START & not PLAYER_1_START & '0' & not BLASTER_FIRE & not SIN_FIRE & not SIN_BOMB
+                            when blaster = '1' and widget_pia_input_select = '0' else
+                        "00" & not PLAYER_2_START & not PLAYER_1_START & "0000" when blaster = '1' else
+                        not board_interface_w1 &
                         "00000" &
                         widget_ic4_y(4) &
                         widget_ic4_y(3) when sinistar = '0' else
@@ -853,7 +958,7 @@ begin
                         not SIN_BOMB &
                         not SIN_FIRE;
 
-    widget_pia: work.pia6821
+    widget_pia: entity work.pia6821
         port map(
 		    rst => reset,
             clk => clock,
